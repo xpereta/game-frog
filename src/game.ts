@@ -55,6 +55,11 @@ export class Game {
     this.caughtThisLunge = 0;
   }
 
+  /** Unlock audio from any user gesture (even one that doesn't fire). */
+  unlockAudio() {
+    this.audio.unlock();
+  }
+
   /** Debug helper: simulate catching `count` bugs in one throw. */
   debugCatch(count: number) {
     this.audio.unlock();

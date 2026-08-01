@@ -21,6 +21,14 @@ fit();
 
 const fire = () => game.fire();
 
+const unlockOnce = () => {
+  game.unlockAudio();
+  window.removeEventListener("pointerdown", unlockOnce);
+  window.removeEventListener("keydown", unlockOnce);
+};
+window.addEventListener("pointerdown", unlockOnce);
+window.addEventListener("keydown", unlockOnce);
+
 window.addEventListener("keydown", (e) => {
   if (e.code === "Space") {
     e.preventDefault();

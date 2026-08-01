@@ -30,33 +30,37 @@ export class Sound {
     return this.ctx;
   }
 
-  /** Resolves with a running context, resuming it first if needed (Safari-safe). */
-  private async runningCtx(): Promise<AudioContext | null> {
-    const ctx = this.ensureCtx();
-    if (!ctx) return null;
-    if (ctx.state !== "running") {
-      try {
-        await ctx.resume();
-      } catch {
-        return null;
-      }
-    }
-    return ctx;
-  }
-
+  /** Call from a user gesture. Resumes and primes the context (required on iOS). */
   unlock() {
     const ctx = this.ensureCtx();
-    ctx?.resume();
-    console.debug("[audio] unlock state:", ctx?.state);
+    if (!ctx) return;
+    if (ctx.state !== "running") ctx.resume();
+    this.prime(ctx);
+    console.debug("[audio] unlock state:", ctx.state);
+  }
+
+  /** iOS keeps a fresh context "suspended" until audio actually plays in the gesture.
+   *  A silent one-sample buffer forces the output to start. */
+  private prime(ctx: AudioContext) {
+    try {
+      const buf = ctx.createBuffer(1, 1, 22050);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(ctx.destination);
+      src.start(0);
+    } catch {
+      /* ignore — some browsers don't allow priming */
+    }
   }
 
   playCatch() {
     this.playCatchFor("fly");
   }
 
-  async playLunge() {
-    const ctx = await this.runningCtx();
+  playLunge() {
+    const ctx = this.ensureCtx();
     if (!ctx) return;
+    ctx.resume();
     const t = ctx.currentTime + 0.01;
 
     const swoosh = ctx.createOscillator();
