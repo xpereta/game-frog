@@ -1,5 +1,5 @@
 import { Sound } from "./audio";
-import { FLY_R, FROG_X, FROG_Y, H, W } from "./consts";
+import { FLY_R, FROG_X, FROG_Y, H, W, WATER_Y } from "./consts";
 import { Fly, flyY, isOffScreen, spawnFly, updateFly } from "./fly";
 import {
   createTongue,
@@ -115,6 +115,7 @@ export class Game {
 
   render(ctx: CanvasRenderingContext2D) {
     this.drawSky(ctx);
+    this.drawPond(ctx);
     for (const f of this.flies) this.drawFly(ctx, f);
     this.drawTongue(ctx);
     this.drawFrog(ctx);
@@ -144,17 +145,80 @@ export class Game {
       ctx.arc(cx + 55, cy, 26, 0, Math.PI * 2);
       ctx.fill();
     }
+  }
 
-    for (let i = 0; i < 4; i++) {
-      const x = 40 + i * 220 + (i % 2) * 40;
-      ctx.fillStyle = "#9fe09f";
-      ctx.beginPath();
-      ctx.ellipse(x, H - 14, 58, 16, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = "#7cc87c";
-      ctx.lineWidth = 2;
-      ctx.stroke();
+  private drawPond(ctx: CanvasRenderingContext2D) {
+    const water = ctx.createLinearGradient(0, WATER_Y, 0, H);
+    water.addColorStop(0, "#9fd8c9");
+    water.addColorStop(1, "#4e9f8e");
+    ctx.fillStyle = water;
+    ctx.fillRect(0, WATER_Y, W, H - WATER_Y);
+
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    for (let x = 0; x <= W; x += 8) {
+      const y = WATER_Y + Math.sin(x * 0.02 + this.elapsed * 1.6) * 3 + Math.sin(x * 0.05 - this.elapsed * 0.9) * 1.5;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
     }
+    ctx.stroke();
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
+    for (let i = 0; i < 6; i++) {
+      const x = 60 + i * 130 + ((i * 37) % 40);
+      const y = WATER_Y + 24 + ((i * 53) % 46);
+      ctx.fillRect(x, y, 26, 2);
+    }
+
+    const padX = [110, 640, 700, 180];
+    padX.forEach((x, i) => {
+      const bob = Math.sin(this.elapsed * 1.4 + i * 1.9) * 2;
+      this.drawLilyPad(ctx, x, WATER_Y + 14 + bob, 40, 13);
+    });
+
+    this.drawLilyPad(ctx, FROG_X, WATER_Y + 66, 62, 18, true);
+    this.drawCattail(ctx, 26);
+    this.drawCattail(ctx, W - 34, true);
+  }
+
+  private drawLilyPad(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    rx: number,
+    ry: number,
+    wide = false,
+  ) {
+    ctx.fillStyle = wide ? "#4e9c4e" : "#5fb25f";
+    ctx.beginPath();
+    ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = wide ? "#3c7f3c" : "#4a914a";
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.arc(x, y, rx, Math.PI * 0.85, Math.PI * 1.15);
+    ctx.lineTo(x, y);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(46, 122, 46, 0.6)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  private drawCattail(ctx: CanvasRenderingContext2D, x: number, flip = false) {
+    ctx.strokeStyle = "#4a914a";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(x, H);
+    ctx.quadraticCurveTo(x + (flip ? -14 : 14), WATER_Y + 60, x + (flip ? -8 : 8), WATER_Y - 20);
+    ctx.stroke();
+    ctx.fillStyle = "#8a5a2b";
+    ctx.beginPath();
+    ctx.ellipse(x + (flip ? -8 : 8), WATER_Y - 44, 7, 20, flip ? -0.15 : 0.15, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   private drawFly(ctx: CanvasRenderingContext2D, f: Fly) {

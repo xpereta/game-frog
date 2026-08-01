@@ -6,4 +6,5 @@ export const TONGUE_TIP_R = 14;
 export const FROG_X = W / 2;
 export const FROG_Y = H - 70;
 export const FROG_R = 44;
+export const WATER_Y = 500;
 export const FLY_R = 22;
