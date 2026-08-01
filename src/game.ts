@@ -1,6 +1,7 @@
 import { Sound } from "./audio";
-import { FLY_R, FROG_X, FROG_Y, H, W, WATER_Y } from "./consts";
-import { Fly, flyY, isOffScreen, spawnFly, updateFly } from "./fly";
+import { FROG_X, FROG_Y, H, W, WATER_Y } from "./consts";
+import { BUG_SPECIES, bugY, facingSign, isOffScreen, spawnBug, updateBug } from "./bugs";
+import type { Bug } from "./bugs";
 import {
   createTongue,
   fireTongue,
@@ -23,13 +24,13 @@ interface Particle {
 
 const HAPPY_MS = 2000;
 const SAD_MS = 1100;
-const MAX_FLIES = 6;
+const MAX_BUGS = 6;
 
 const rnd = (min: number, max: number) => min + Math.random() * (max - min);
 
 export class Game {
   private tongue = createTongue();
-  private flies: Fly[] = [];
+  private bugs: Bug[] = [];
   private particles: Particle[] = [];
   private frogState: FrogState = "idle";
   private stateTimer = 0;
@@ -59,19 +60,19 @@ export class Game {
     }
 
     this.spawnTimer -= dt;
-    if (this.spawnTimer <= 0 && this.flies.length < MAX_FLIES) {
-      this.flies.push(spawnFly());
+    if (this.spawnTimer <= 0 && this.bugs.length < MAX_BUGS) {
+      this.bugs.push(spawnBug());
       this.spawnTimer = rnd(0.9, 2.2);
     }
 
-    for (const f of this.flies) updateFly(f, dt);
-    this.flies = this.flies.filter((f) => !isOffScreen(f));
+    for (const b of this.bugs) updateBug(b, dt);
+    this.bugs = this.bugs.filter((b) => !isOffScreen(b));
 
     if (this.tongue.state === "extend") {
-      const eaten = this.flies.filter((f) => tongueHitsFly(this.tongue, f.x, flyY(f)));
-      for (const f of eaten) {
-        this.burst(f.x, flyY(f));
-        this.audio.playCatch();
+      const eaten = this.bugs.filter((b) => tongueHitsFly(this.tongue, b.x, bugY(b)));
+      for (const b of eaten) {
+        this.burst(b.x, bugY(b));
+        this.audio.playCatchFor(b.species);
         this.frogState = "happy";
         this.stateTimer = HAPPY_MS;
         this.hasCaught = true;
@@ -79,7 +80,7 @@ export class Game {
       }
       if (eaten.length > 0) {
         const eatenSet = new Set(eaten);
-        this.flies = this.flies.filter((f) => !eatenSet.has(f));
+        this.bugs = this.bugs.filter((b) => !eatenSet.has(b));
       }
     }
 
@@ -116,7 +117,7 @@ export class Game {
   render(ctx: CanvasRenderingContext2D) {
     this.drawSky(ctx);
     this.drawPond(ctx);
-    for (const f of this.flies) this.drawFly(ctx, f);
+    for (const b of this.bugs) this.drawBug(ctx, b);
     this.drawTongue(ctx);
     this.drawFrog(ctx);
     this.drawParticles(ctx);
@@ -221,11 +222,15 @@ export class Game {
     ctx.fill();
   }
 
-  private drawFly(ctx: CanvasRenderingContext2D, f: Fly) {
-    ctx.font = `${FLY_R * 2.4}px serif`;
+  private drawBug(ctx: CanvasRenderingContext2D, b: Bug) {
+    ctx.save();
+    ctx.translate(b.x, bugY(b));
+    ctx.scale(facingSign(b), 1);
+    ctx.font = `${BUG_SPECIES[b.species].fontSize}px serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("🪰", f.x, flyY(f));
+    ctx.fillText(BUG_SPECIES[b.species].emoji, 0, 0);
+    ctx.restore();
   }
 
   private drawTongue(ctx: CanvasRenderingContext2D) {
@@ -296,7 +301,7 @@ export class Game {
     ctx.font = "22px system-ui";
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(20, 80, 120, 0.75)";
-    ctx.fillText("press space — or tap — to catch a fly", W / 2, H - 20);
+    ctx.fillText("press space — or tap — to catch a bug", W / 2, H - 20);
     ctx.globalAlpha = 1;
   }
 }

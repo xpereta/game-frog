@@ -1,4 +1,19 @@
+import type { BugSpecies } from "./bugs";
+
 const PENTATONIC = [261.63, 293.66, 329.63, 392.0, 440.0];
+
+const pick = <T>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+interface SpeciesJingle {
+  roots: number[];
+  notes: [number, number];
+}
+
+const SPECIES_JINGLE: Record<BugSpecies, SpeciesJingle> = {
+  fly: { roots: [1, 2], notes: [4, 6] },
+  ladybug: { roots: [1], notes: [3, 4] },
+  bee: { roots: [2, 3], notes: [5, 7] },
+};
 
 export class Sound {
   private ctx: AudioContext | null = null;
@@ -12,10 +27,16 @@ export class Sound {
   }
 
   playCatch() {
+    this.playCatchFor("fly");
+  }
+
+  playCatchFor(species: BugSpecies) {
     const ctx = this.ctx;
     if (!ctx || ctx.state !== "running") return;
-    const root = 2 ** Math.round(Math.random());
-    const notes = 4 + Math.floor(Math.random() * 3);
+    const cfg = SPECIES_JINGLE[species];
+    const root = 2 ** pick(cfg.roots);
+    const [minNotes, maxNotes] = cfg.notes;
+    const notes = minNotes + Math.floor(Math.random() * (maxNotes - minNotes + 1));
     const start = ctx.currentTime + 0.02;
     for (let i = 0; i < notes; i++) {
       const freq = PENTATONIC[Math.floor(Math.random() * PENTATONIC.length)] * root;
