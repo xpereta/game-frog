@@ -18,12 +18,22 @@ const SPECIES_JINGLE: Record<BugSpecies, SpeciesJingle> = {
 export class Sound {
   private ctx: AudioContext | null = null;
 
-  unlock() {
+  private ensureCtx(): AudioContext | null {
     if (!this.ctx) {
       const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (Ctor) this.ctx = new Ctor();
+      if (!Ctor) return null;
+      this.ctx = new Ctor();
+      this.ctx.onstatechange = () => {
+        if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
+      };
     }
-    this.ctx?.resume();
+    return this.ctx;
+  }
+
+  unlock() {
+    const ctx = this.ensureCtx();
+    ctx?.resume();
+    console.debug("[audio] unlock state:", ctx?.state);
   }
 
   playCatch() {
@@ -31,8 +41,10 @@ export class Sound {
   }
 
   playCatchFor(species: BugSpecies) {
-    const ctx = this.ctx;
-    if (!ctx || ctx.state !== "running") return;
+    const ctx = this.ensureCtx();
+    if (!ctx) return;
+    ctx.resume();
+    console.debug("[audio] playCatchFor state:", ctx.state);
     const cfg = SPECIES_JINGLE[species];
     const root = 2 ** pick(cfg.roots);
     const [minNotes, maxNotes] = cfg.notes;
@@ -46,8 +58,10 @@ export class Sound {
   }
 
   playMiss() {
-    const ctx = this.ctx;
-    if (!ctx || ctx.state !== "running") return;
+    const ctx = this.ensureCtx();
+    if (!ctx) return;
+    ctx.resume();
+    console.debug("[audio] playMiss state:", ctx.state);
     const t = ctx.currentTime + 0.02;
     this.pluck(392, t, 0.14, "sine");
     this.pluck(311, t + 0.12, 0.18, "sine");

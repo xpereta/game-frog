@@ -7,12 +7,14 @@ export interface BugSpeciesConfig {
   minSpeed: number;
   maxSpeed: number;
   fontSize: number;
+  /** "side": profile emoji, flip horizontally to face travel. "top": top-down emoji, rotate ±90° to face travel. */
+  view: "side" | "top";
 }
 
 export const BUG_SPECIES: Record<BugSpecies, BugSpeciesConfig> = {
-  fly: { emoji: "🪰", minSpeed: 70, maxSpeed: 190, fontSize: 52 },
-  ladybug: { emoji: "🐞", minSpeed: 45, maxSpeed: 110, fontSize: 44 },
-  bee: { emoji: "🐝", minSpeed: 110, maxSpeed: 240, fontSize: 60 },
+  fly: { emoji: "🪰", minSpeed: 70, maxSpeed: 190, fontSize: 52, view: "top" },
+  ladybug: { emoji: "🐞", minSpeed: 45, maxSpeed: 110, fontSize: 44, view: "top" },
+  bee: { emoji: "🐝", minSpeed: 110, maxSpeed: 240, fontSize: 60, view: "side" },
 };
 
 const SPECIES: BugSpecies[] = ["fly", "ladybug", "bee"];
@@ -81,4 +83,16 @@ export function bugBounds(b: Bug) {
 
 export function facingSign(b: Bug): number {
   return Math.sign(b.vx);
+}
+
+export interface BugRenderTransform {
+  flip: boolean;
+  angle: number;
+}
+
+export function bugRenderTransform(b: Bug): BugRenderTransform {
+  const dir = Math.sign(b.vx);
+  return BUG_SPECIES[b.species].view === "top"
+    ? { flip: false, angle: dir * (Math.PI / 2) }
+    : { flip: dir < 0, angle: 0 };
 }

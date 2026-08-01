@@ -1,6 +1,6 @@
 import { Sound } from "./audio";
 import { FROG_X, H, W, WATER_Y } from "./consts";
-import { BUG_SPECIES, bugY, facingSign, isOffScreen, spawnBug, updateBug } from "./bugs";
+import { BUG_SPECIES, bugRenderTransform, bugY, isOffScreen, spawnBug, updateBug } from "./bugs";
 import type { Bug } from "./bugs";
 import { drawFrog, drawTongue } from "./frog";
 import { bestStreakAfter, drawHud } from "./hud";
@@ -244,7 +244,9 @@ export class Game {
   private drawBug(ctx: CanvasRenderingContext2D, b: Bug) {
     ctx.save();
     ctx.translate(b.x, bugY(b));
-    ctx.scale(facingSign(b), 1);
+    const t = bugRenderTransform(b);
+    if (t.flip) ctx.scale(-1, 1);
+    if (t.angle) ctx.rotate(t.angle);
     ctx.font = `${BUG_SPECIES[b.species].fontSize}px serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";

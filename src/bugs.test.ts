@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { H, W } from "./consts";
 import {
   BUG_SPECIES,
+  bugRenderTransform,
   facingSign,
   isOffScreen,
   spawnBug,
@@ -52,6 +53,30 @@ describe("facingSign", () => {
     expect(facingSign(b)).toBe(1);
     b.vx = -120;
     expect(facingSign(b)).toBe(-1);
+  });
+});
+
+describe("bugRenderTransform", () => {
+  it("rotates top-view bugs ±90° so the head leads travel", () => {
+    const fly = spawnBug("fly");
+    fly.vx = 120;
+    expect(bugRenderTransform(fly)).toEqual({ flip: false, angle: Math.PI / 2 });
+    fly.vx = -120;
+    expect(bugRenderTransform(fly)).toEqual({ flip: false, angle: -Math.PI / 2 });
+  });
+
+  it("flips side-view bugs horizontally when moving left", () => {
+    const bee = spawnBug("bee");
+    bee.vx = 120;
+    expect(bugRenderTransform(bee)).toEqual({ flip: false, angle: 0 });
+    bee.vx = -120;
+    expect(bugRenderTransform(bee)).toEqual({ flip: true, angle: 0 });
+  });
+
+  it("marks fly and ladybug as top-down, bee as side", () => {
+    expect(BUG_SPECIES.fly.view).toBe("top");
+    expect(BUG_SPECIES.ladybug.view).toBe("top");
+    expect(BUG_SPECIES.bee.view).toBe("side");
   });
 });
 
