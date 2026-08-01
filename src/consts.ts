@@ -1,0 +1,9 @@
+export const W = 800;
+export const H = 600;
+export const TONGUE_SPEED = 600;
+export const TONGUE_REACH = 430;
+export const TONGUE_TIP_R = 14;
+export const FROG_X = W / 2;
+export const FROG_Y = H - 70;
+export const FROG_R = 44;
+export const FLY_R = 22;
