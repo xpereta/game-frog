@@ -1,6 +1,7 @@
 import { Sound } from "./audio";
 import { FLY_R, FROG_X, FROG_Y, H, W, WATER_Y } from "./consts";
 import { Fly, flyY, isOffScreen, spawnFly, updateFly } from "./fly";
+import { bestStreakAfter, drawHud } from "./hud";
 import {
   createTongue,
   fireTongue,
@@ -18,7 +19,10 @@ interface Particle {
   vx: number;
   vy: number;
   life: number;
+  maxLife: number;
   color: string;
+  size: number;
+  ring?: boolean;
 }
 
 const HAPPY_MS = 2000;
@@ -39,6 +43,8 @@ export class Game {
   private cloudOffset = 0;
   private caughtThisLunge = false;
   private audio = new Sound();
+  private streak = 0;
+  private bestStreak = 0;
 
   fire() {
     this.audio.unlock();
@@ -56,6 +62,7 @@ export class Game {
       this.frogState = "sad";
       this.stateTimer = SAD_MS;
       this.audio.playMiss();
+      this.streak = 0;
     }
 
     this.spawnTimer -= dt;
@@ -76,6 +83,8 @@ export class Game {
         this.stateTimer = HAPPY_MS;
         this.hasCaught = true;
         this.caughtThisLunge = true;
+        this.streak++;
+        this.bestStreak = bestStreakAfter(this.streak, this.bestStreak);
       }
       if (eaten.length > 0) {
         const eatenSet = new Set(eaten);
@@ -98,19 +107,34 @@ export class Game {
   }
 
   private burst(x: number, y: number) {
-    const colors = ["#ff5b94", "#ffb347", "#7ee081", "#8fd8ff"];
-    for (let i = 0; i < 16; i++) {
+    const colors = ["#ff5b94", "#ffb347", "#7ee081", "#8fd8ff", "#fff3b0", "#c792ea"];
+    for (let i = 0; i < 44; i++) {
       const a = Math.random() * Math.PI * 2;
-      const sp = rnd(40, 160);
+      const sp = rnd(70, 320);
+      const life = rnd(0.5, 1);
       this.particles.push({
         x,
         y,
         vx: Math.cos(a) * sp,
         vy: Math.sin(a) * sp,
-        life: rnd(0.4, 0.8),
+        life,
+        maxLife: life,
         color: colors[i % colors.length],
+        size: rnd(5, 8),
       });
     }
+    const ringLife = 0.4;
+    this.particles.push({
+      x,
+      y,
+      vx: 0,
+      vy: 0,
+      life: ringLife,
+      maxLife: ringLife,
+      color: "#ffffff",
+      size: 70,
+      ring: true,
+    });
   }
 
   render(ctx: CanvasRenderingContext2D) {
@@ -120,6 +144,7 @@ export class Game {
     this.drawTongue(ctx);
     this.drawFrog(ctx);
     this.drawParticles(ctx);
+    drawHud(ctx, this.streak, this.bestStreak);
     if (!this.hasCaught && this.elapsed < 6000) this.drawHint(ctx);
   }
 
@@ -282,11 +307,20 @@ export class Game {
 
   private drawParticles(ctx: CanvasRenderingContext2D) {
     for (const p of this.particles) {
-      ctx.globalAlpha = Math.max(0, p.life / 0.8);
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-      ctx.fill();
+      const t = Math.max(0, p.life / p.maxLife);
+      ctx.globalAlpha = t;
+      if (p.ring) {
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = 3 * t + 1;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * (1 - t), 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(0.5, p.size * t), 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
     ctx.globalAlpha = 1;
   }
