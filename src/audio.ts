@@ -94,9 +94,10 @@ export class Sound {
     const [minNotes, maxNotes] = cfg.notes;
     const notes = minNotes + Math.floor(Math.random() * (maxNotes - minNotes + 1));
     const start = ctx.currentTime + 0.02;
+    this.thump(start, 120 + 40 * (root > 1.5 ? 1 : 0));
     for (let i = 0; i < notes; i++) {
       const freq = PENTATONIC[Math.floor(Math.random() * PENTATONIC.length)] * root;
-      this.pluck(freq, start + i * 0.09, 0.16);
+      this.pluck(freq, start + i * 0.09, 0.16, "triangle", 0.2);
     }
     this.pluck(PENTATONIC[4] * root, start + notes * 0.09, 0.4);
   }
@@ -111,6 +112,27 @@ export class Sound {
     this.pluck(base, t, 0.12, "sine", 0.16);
     this.pluck(base * 1.5, t + 0.07, 0.16, "sine", 0.17);
     this.pluck(base * 2, t + 0.14, 0.26, "sine", 0.15);
+  }
+
+  /** Short tactile snatch when the tongue first touches a bug. */
+  playGrab(species: BugSpecies) {
+    const ctx = this.ensureCtx();
+    if (!ctx) return;
+    ctx.resume();
+    const t = ctx.currentTime + 0.02;
+    switch (species) {
+      case "fly":
+        this.pluck(700, t, 0.06, "triangle", 0.18);
+        this.pluck(1050, t + 0.05, 0.08, "triangle", 0.15);
+        break;
+      case "ladybug":
+        this.pluck(311, t, 0.16, "sine", 0.22);
+        break;
+      case "bee":
+        this.pluck(196, t, 0.2, "sawtooth", 0.14);
+        this.pluck(198, t, 0.2, "sawtooth", 0.1);
+        break;
+    }
   }
 
   playMiss() {
@@ -129,6 +151,22 @@ export class Sound {
     const gain = ctx.createGain();
     osc.type = type;
     osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, at);
+    gain.gain.exponentialRampToValueAtTime(peak, at + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(at);
+    osc.stop(at + dur + 0.05);
+  }
+
+  /** Low percussive boom with a pitch drop for a thumping catch body. */
+  private thump(at: number, freq = 130, dur = 0.32, peak = 0.4) {
+    const ctx = this.ctx!;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq * 1.7, at);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.5, at + dur);
     gain.gain.setValueAtTime(0.0001, at);
     gain.gain.exponentialRampToValueAtTime(peak, at + 0.01);
     gain.gain.exponentialRampToValueAtTime(0.0001, at + dur);

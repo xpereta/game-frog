@@ -30,7 +30,7 @@ export function tongueTipY(t: Tongue): number {
 }
 
 /** Returns true when the tongue finishes extending without a catch (a miss). */
-export function updateTongue(t: Tongue, dt: number): boolean {
+export function updateTongue(t: Tongue, dt: number, carry = false): boolean {
   if (t.state === "extend") {
     t.len += TONGUE_SPEED * dt;
     if (t.len >= TONGUE_REACH) {
@@ -39,7 +39,7 @@ export function updateTongue(t: Tongue, dt: number): boolean {
       return true;
     }
   } else if (t.state === "retract") {
-    t.len -= TONGUE_SPEED * 2 * dt;
+    t.len -= TONGUE_SPEED * (carry ? 1 : 2) * dt;
     if (t.len <= 0) {
       t.len = 0;
       t.state = "idle";

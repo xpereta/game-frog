@@ -4,7 +4,7 @@ import { BUG_SPECIES, bugRenderTransform, bugY, isOffScreen, spawnBug, updateBug
 import type { Bug } from "./bugs";
 import { drawFrog, drawTongue, happyJumpOffset } from "./frog";
 import { bestStreakAfter, drawHud } from "./hud";
-import { altitudeFor, createTongue, fireTongue, mouthY, tongueHitsFly, updateTongue } from "./tongue";
+import { altitudeFor, createTongue, fireTongue, mouthY, tongueHitsFly, tongueTipY, updateTongue } from "./tongue";
 
 type FrogState = "idle" | "happy" | "sad";
 
@@ -30,6 +30,7 @@ const rnd = (min: number, max: number) => min + Math.random() * (max - min);
 export class Game {
   private tongue = createTongue();
   private bugs: Bug[] = [];
+  private grabbed: Bug[] = [];
   private particles: Particle[] = [];
   private frogState: FrogState = "idle";
   private stateTimer = 0;
@@ -77,8 +78,62 @@ export class Game {
     this.cloudOffset += dt * 8;
     if (this.sunFlareTimer > 0) this.sunFlareTimer -= dt;
 
-    const missed = updateTongue(this.tongue, dt);
-    if (missed && this.caughtThisLunge === 0) {
+    const missed = updateTongue(this.tongue, dt, this.grabbed.length > 0);
+
+    if (this.tongue.state === "extend") {
+      for (const b of this.bugs) {
+        if (tongueHitsFly(this.tongue, b.x, bugY(b))) {
+          this.audio.playGrab(b.species);
+          const alt = altitudeFor(bugY(b));
+          if (alt >= 0.5) this.audio.playReach(alt);
+          if (alt >= 0.85) {
+            this.sparkleBurst(b.x, bugY(b));
+            this.sunFlareTimer = 1;
+          }
+          this.grabbed.push(b);
+        }
+      }
+      if (this.grabbed.length > 0) {
+        const grabbedSet = new Set(this.grabbed);
+        this.bugs = this.bugs.filter((b) => !grabbedSet.has(b));
+      }
+    }
+
+    for (let i = 0; i < this.grabbed.length; i++) {
+      const b = this.grabbed[i];
+      b.x = FROG_X + (i - (this.grabbed.length - 1) / 2) * 16;
+      b.grabbedY = tongueTipY(this.tongue);
+    }
+
+    if (
+      this.tongue.state === "retract" &&
+      this.grabbed.length > 0 &&
+      tongueTipY(this.tongue) >= mouthY() - 14
+    ) {
+      const landed = this.grabbed;
+      this.grabbed = [];
+      this.caughtThisLunge += landed.length;
+      if (this.frogState !== "happy") {
+        this.frogState = "happy";
+        this.stateTimer = HAPPY_MS;
+        this.happyVariant = Math.random();
+        this.frogAirborneMs = 0;
+        this.splash(FROG_X, WATER_Y + 50, 8, 24);
+      } else {
+        this.stateTimer = HAPPY_MS;
+        this.frogAirborneMs = 0;
+      }
+      this.lastCatchCount = this.caughtThisLunge;
+      this.hasCaught = true;
+      this.streak += landed.length;
+      this.bestStreak = bestStreakAfter(this.streak, this.bestStreak);
+      for (const b of landed) {
+        this.burst(b.x, mouthY() - 12, 0);
+        this.audio.playCatchFor(b.species);
+      }
+    }
+
+    if (missed && this.caughtThisLunge === 0 && this.grabbed.length === 0) {
       this.frogState = "sad";
       this.stateTimer = SAD_MS;
       this.audio.playMiss();
@@ -93,39 +148,6 @@ export class Game {
 
     for (const b of this.bugs) updateBug(b, dt);
     this.bugs = this.bugs.filter((b) => !isOffScreen(b));
-
-    if (this.tongue.state === "extend") {
-      const eaten = this.bugs.filter((b) => tongueHitsFly(this.tongue, b.x, bugY(b)));
-      for (const b of eaten) {
-        const alt = altitudeFor(bugY(b));
-        this.burst(b.x, bugY(b), alt);
-        this.audio.playCatchFor(b.species);
-        if (alt >= 0.5) this.audio.playReach(alt);
-        if (alt >= 0.85) {
-          this.sparkleBurst(b.x, bugY(b));
-          this.sunFlareTimer = 1;
-        }
-        this.caughtThisLunge++;
-        if (this.caughtThisLunge === 1) {
-          this.frogState = "happy";
-          this.stateTimer = HAPPY_MS;
-          this.happyVariant = Math.random();
-          this.frogAirborneMs = 0;
-          this.splash(FROG_X, WATER_Y + 50, 8, 24);
-        } else if (this.caughtThisLunge === 2) {
-          this.stateTimer = HAPPY_MS;
-          this.frogAirborneMs = 0;
-        }
-        this.lastCatchCount = this.caughtThisLunge;
-        this.hasCaught = true;
-        this.streak++;
-        this.bestStreak = bestStreakAfter(this.streak, this.bestStreak);
-      }
-      if (eaten.length > 0) {
-        const eatenSet = new Set(eaten);
-        this.bugs = this.bugs.filter((b) => !eatenSet.has(b));
-      }
-    }
 
     if (this.frogState !== "idle") {
       this.stateTimer -= dt * 1000;
@@ -236,6 +258,10 @@ export class Game {
     this.drawSky(ctx, this.frogState, this.stateTimer, this.sunFlareTimer);
     this.drawPond(ctx);
     for (const b of this.bugs) this.drawBug(ctx, b);
+    for (const b of this.grabbed) {
+      const dist = mouthY() - bugY(b);
+      this.drawBug(ctx, b, Math.min(1, Math.max(0, dist / 70)));
+    }
     this.drawTongue(ctx);
     this.drawFrog(ctx);
     this.drawParticles(ctx);
@@ -408,8 +434,9 @@ export class Game {
     ctx.fill();
   }
 
-  private drawBug(ctx: CanvasRenderingContext2D, b: Bug) {
+  private drawBug(ctx: CanvasRenderingContext2D, b: Bug, alpha = 1) {
     ctx.save();
+    if (alpha < 1) ctx.globalAlpha = alpha;
     ctx.translate(b.x, bugY(b));
     const t = bugRenderTransform(b);
     if (t.flip) ctx.scale(-1, 1);

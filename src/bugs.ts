@@ -36,6 +36,8 @@ export interface Bug {
   vx: number;
   phase: number;
   wobbleAmp: number;
+  /** When the tongue is carrying this bug, its render y (follows the tongue tip). */
+  grabbedY?: number;
 }
 
 const rnd = (min: number, max: number) => min + Math.random() * (max - min);
@@ -68,6 +70,7 @@ export function updateBug(b: Bug, dt: number) {
 }
 
 export function bugY(b: Bug): number {
+  if (b.grabbedY !== undefined) return b.grabbedY;
   return b.baseY + Math.sin(b.phase) * b.wobbleAmp;
 }
 
@@ -93,6 +96,7 @@ export interface BugRenderTransform {
 }
 
 export function bugRenderTransform(b: Bug): BugRenderTransform {
+  if (b.grabbedY !== undefined) return { flip: false, angle: 0 };
   const dir = Math.sign(b.vx);
   if (BUG_SPECIES[b.species].view === "top") {
     return { flip: false, angle: dir * (Math.PI / 2) };
