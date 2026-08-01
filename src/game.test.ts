@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { H, TONGUE_REACH, TONGUE_SPEED, W } from "./consts";
 import { isOffScreen, spawnFly, updateFly, flyY } from "./fly";
 import {
+  altitudeFor,
   createTongue,
   fireTongue,
+  mouthY,
   tongueHitsFly,
   tongueTipY,
   updateTongue,
@@ -80,5 +82,13 @@ describe("tongue", () => {
     updateTongue(t, TONGUE_REACH / TONGUE_SPEED + 0.001);
     expect(tongueHitsFly(t, W / 2, tongueTipY(t))).toBe(true);
     expect(tongueHitsFly(t, W / 2 - 80, tongueTipY(t))).toBe(false);
+  });
+
+  it("computes altitude 0 at the mouth, ~1 at max reach, clamped out of range", () => {
+    expect(altitudeFor(mouthY())).toBe(0);
+    expect(altitudeFor(mouthY() - TONGUE_REACH)).toBeCloseTo(1, 5);
+    expect(altitudeFor(mouthY() - TONGUE_REACH * 0.5)).toBeCloseTo(0.5, 5);
+    expect(altitudeFor(mouthY() + 100)).toBe(0);
+    expect(altitudeFor(mouthY() - TONGUE_REACH - 100)).toBe(1);
   });
 });

@@ -30,6 +30,20 @@ export class Sound {
     return this.ctx;
   }
 
+  /** Resolves with a running context, resuming it first if needed (Safari-safe). */
+  private async runningCtx(): Promise<AudioContext | null> {
+    const ctx = this.ensureCtx();
+    if (!ctx) return null;
+    if (ctx.state !== "running") {
+      try {
+        await ctx.resume();
+      } catch {
+        return null;
+      }
+    }
+    return ctx;
+  }
+
   unlock() {
     const ctx = this.ensureCtx();
     ctx?.resume();
@@ -40,22 +54,34 @@ export class Sound {
     this.playCatchFor("fly");
   }
 
-  playLunge() {
-    const ctx = this.ensureCtx();
+  async playLunge() {
+    const ctx = await this.runningCtx();
     if (!ctx) return;
-    ctx.resume();
     const t = ctx.currentTime + 0.01;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "triangle";
-    osc.frequency.setValueAtTime(150, t);
-    osc.frequency.exponentialRampToValueAtTime(560, t + 0.09);
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.12, t + 0.015);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start(t);
-    osc.stop(t + 0.12);
+
+    const swoosh = ctx.createOscillator();
+    const swooshGain = ctx.createGain();
+    swoosh.type = "triangle";
+    swoosh.frequency.setValueAtTime(200, t);
+    swoosh.frequency.exponentialRampToValueAtTime(1000, t + 0.5);
+    swooshGain.gain.setValueAtTime(0.0001, t);
+    swooshGain.gain.exponentialRampToValueAtTime(0.26, t + 0.04);
+    swooshGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.98);
+    swoosh.connect(swooshGain).connect(ctx.destination);
+    swoosh.start(t);
+    swoosh.stop(t + 1.0);
+
+    const pop = ctx.createOscillator();
+    const popGain = ctx.createGain();
+    pop.type = "sine";
+    pop.frequency.setValueAtTime(150, t);
+    pop.frequency.exponentialRampToValueAtTime(80, t + 0.12);
+    popGain.gain.setValueAtTime(0.0001, t);
+    popGain.gain.exponentialRampToValueAtTime(0.2, t + 0.005);
+    popGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    pop.connect(popGain).connect(ctx.destination);
+    pop.start(t);
+    pop.stop(t + 0.2);
   }
 
   playCatchFor(species: BugSpecies) {
@@ -75,6 +101,18 @@ export class Sound {
     this.pluck(PENTATONIC[4] * root, start + notes * 0.09, 0.4);
   }
 
+  /** Bright rising "ping-up" sparkle layered on the jingle for high strikes. */
+  playReach(alt: number) {
+    const ctx = this.ensureCtx();
+    if (!ctx) return;
+    ctx.resume();
+    const t = ctx.currentTime + 0.02;
+    const base = 520 + alt * 280;
+    this.pluck(base, t, 0.12, "sine", 0.16);
+    this.pluck(base * 1.5, t + 0.07, 0.16, "sine", 0.17);
+    this.pluck(base * 2, t + 0.14, 0.26, "sine", 0.15);
+  }
+
   playMiss() {
     const ctx = this.ensureCtx();
     if (!ctx) return;
@@ -85,14 +123,14 @@ export class Sound {
     this.pluck(311, t + 0.12, 0.18, "sine");
   }
 
-  private pluck(freq: number, at: number, dur: number, type: OscillatorType = "triangle") {
+  private pluck(freq: number, at: number, dur: number, type: OscillatorType = "triangle", peak = 0.28) {
     const ctx = this.ctx!;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = type;
     osc.frequency.value = freq;
     gain.gain.setValueAtTime(0.0001, at);
-    gain.gain.exponentialRampToValueAtTime(0.28, at + 0.01);
+    gain.gain.exponentialRampToValueAtTime(peak, at + 0.01);
     gain.gain.exponentialRampToValueAtTime(0.0001, at + dur);
     osc.connect(gain).connect(ctx.destination);
     osc.start(at);

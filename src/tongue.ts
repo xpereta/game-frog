@@ -19,6 +19,12 @@ export function fireTongue(t: Tongue): boolean {
 
 export const mouthY = () => FROG_Y - FROG_R;
 
+/** How high (0..1) a point at y is above the frog's mouth, relative to max tongue reach. */
+export function altitudeFor(y: number): number {
+  const alt = (mouthY() - y) / TONGUE_REACH;
+  return Math.min(1, Math.max(0, alt));
+}
+
 export function tongueTipY(t: Tongue): number {
   return mouthY() - t.len;
 }
@@ -33,7 +39,7 @@ export function updateTongue(t: Tongue, dt: number): boolean {
       return true;
     }
   } else if (t.state === "retract") {
-    t.len -= TONGUE_SPEED * dt;
+    t.len -= TONGUE_SPEED * 2 * dt;
     if (t.len <= 0) {
       t.len = 0;
       t.state = "idle";

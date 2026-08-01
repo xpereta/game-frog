@@ -2,9 +2,9 @@ import { Sound } from "./audio";
 import { FROG_X, H, W, WATER_Y } from "./consts";
 import { BUG_SPECIES, bugRenderTransform, bugY, isOffScreen, spawnBug, updateBug } from "./bugs";
 import type { Bug } from "./bugs";
-import { drawFrog, drawTongue } from "./frog";
+import { drawFrog, drawTongue, happyJumpOffset } from "./frog";
 import { bestStreakAfter, drawHud } from "./hud";
-import { createTongue, fireTongue, tongueHitsFly, updateTongue } from "./tongue";
+import { altitudeFor, createTongue, fireTongue, mouthY, tongueHitsFly, updateTongue } from "./tongue";
 
 type FrogState = "idle" | "happy" | "sad";
 
@@ -18,6 +18,7 @@ interface Particle {
   color: string;
   size: number;
   ring?: boolean;
+  star?: boolean;
 }
 
 const HAPPY_MS = 2000;
@@ -36,7 +37,11 @@ export class Game {
   private elapsed = 0;
   private hasCaught = false;
   private cloudOffset = 0;
-  private caughtThisLunge = false;
+  private caughtThisLunge = 0;
+  private lastCatchCount = 0;
+  private happyVariant = 0;
+  private sunFlareTimer = 0;
+  private frogAirborneMs = 0;
   private audio = new Sound();
   private streak = 0;
   private bestStreak = 0;
@@ -46,15 +51,34 @@ export class Game {
     if (this.tongue.state !== "idle") return;
     fireTongue(this.tongue);
     this.audio.playLunge();
-    this.caughtThisLunge = false;
+    this.caughtThisLunge = 0;
+  }
+
+  /** Debug helper: simulate catching `count` bugs in one throw. */
+  debugCatch(count: number) {
+    this.audio.unlock();
+    for (let i = 0; i < count; i++) {
+      this.burst(FROG_X + (i - (count - 1) / 2) * 50, mouthY() - 30);
+      this.audio.playCatchFor("fly");
+    }
+    this.frogState = "happy";
+    this.stateTimer = HAPPY_MS;
+    this.frogAirborneMs = 0;
+    this.splash(FROG_X, WATER_Y + 50, 8, 24);
+    this.lastCatchCount = count;
+    this.happyVariant = Math.random();
+    this.hasCaught = true;
+    this.streak += count;
+    this.bestStreak = bestStreakAfter(this.streak, this.bestStreak);
   }
 
   update(dt: number) {
     this.elapsed += dt;
     this.cloudOffset += dt * 8;
+    if (this.sunFlareTimer > 0) this.sunFlareTimer -= dt;
 
     const missed = updateTongue(this.tongue, dt);
-    if (missed && !this.caughtThisLunge) {
+    if (missed && this.caughtThisLunge === 0) {
       this.frogState = "sad";
       this.stateTimer = SAD_MS;
       this.audio.playMiss();
@@ -73,12 +97,27 @@ export class Game {
     if (this.tongue.state === "extend") {
       const eaten = this.bugs.filter((b) => tongueHitsFly(this.tongue, b.x, bugY(b)));
       for (const b of eaten) {
-        this.burst(b.x, bugY(b));
+        const alt = altitudeFor(bugY(b));
+        this.burst(b.x, bugY(b), alt);
         this.audio.playCatchFor(b.species);
-        this.frogState = "happy";
-        this.stateTimer = HAPPY_MS;
+        if (alt >= 0.5) this.audio.playReach(alt);
+        if (alt >= 0.85) {
+          this.sparkleBurst(b.x, bugY(b));
+          this.sunFlareTimer = 1;
+        }
+        this.caughtThisLunge++;
+        if (this.caughtThisLunge === 1) {
+          this.frogState = "happy";
+          this.stateTimer = HAPPY_MS;
+          this.happyVariant = Math.random();
+          this.frogAirborneMs = 0;
+          this.splash(FROG_X, WATER_Y + 50, 8, 24);
+        } else if (this.caughtThisLunge === 2) {
+          this.stateTimer = HAPPY_MS;
+          this.frogAirborneMs = 0;
+        }
+        this.lastCatchCount = this.caughtThisLunge;
         this.hasCaught = true;
-        this.caughtThisLunge = true;
         this.streak++;
         this.bestStreak = bestStreakAfter(this.streak, this.bestStreak);
       }
@@ -89,8 +128,17 @@ export class Game {
     }
 
     if (this.frogState !== "idle") {
-      this.stateTimer -= dt;
+      this.stateTimer -= dt * 1000;
       if (this.stateTimer <= 0) this.frogState = "idle";
+    }
+
+    const happyP = this.frogState === "happy" ? Math.min(1, 1 - this.stateTimer / HAPPY_MS) : 0;
+    const frogOffset = this.frogState === "happy" ? happyJumpOffset(happyP, this.lastCatchCount > 1) : 0;
+    if (frogOffset < -8) {
+      this.frogAirborneMs += dt * 1000;
+    } else {
+      if (this.frogAirborneMs > 150) this.splash(FROG_X, WATER_Y + 50);
+      this.frogAirborneMs = 0;
     }
 
     for (const p of this.particles) {
@@ -102,11 +150,14 @@ export class Game {
     this.particles = this.particles.filter((p) => p.life > 0);
   }
 
-  private burst(x: number, y: number) {
+  private burst(x: number, y: number, alt = 0) {
     const colors = ["#ff5b94", "#ffb347", "#7ee081", "#8fd8ff", "#fff3b0", "#c792ea"];
-    for (let i = 0; i < 44; i++) {
+    const count = 44 + Math.round(36 * alt);
+    const maxSp = 320 + 100 * alt;
+    const maxSize = 8 + 3 * alt;
+    for (let i = 0; i < count; i++) {
       const a = Math.random() * Math.PI * 2;
-      const sp = rnd(70, 320);
+      const sp = rnd(70, maxSp);
       const life = rnd(0.5, 1);
       this.particles.push({
         x,
@@ -116,7 +167,7 @@ export class Game {
         life,
         maxLife: life,
         color: colors[i % colors.length],
-        size: rnd(5, 8),
+        size: rnd(5, maxSize),
       });
     }
     const ringLife = 0.4;
@@ -128,13 +179,61 @@ export class Game {
       life: ringLife,
       maxLife: ringLife,
       color: "#ffffff",
-      size: 70,
+      size: 70 + 50 * alt,
       ring: true,
     });
   }
 
+  private splash(x: number, y: number, count = 14, ringSize = 34) {
+    const colors = ["#e8fbff", "#bfe8f5", "#9fd8c9"];
+    for (let i = 0; i < count; i++) {
+      const a = rnd(-Math.PI * 0.9, -Math.PI * 0.1);
+      const sp = rnd(50, 180);
+      const life = rnd(0.35, 0.6);
+      this.particles.push({
+        x: x + rnd(-30, 30),
+        y,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp,
+        life,
+        maxLife: life,
+        color: colors[i % colors.length],
+        size: rnd(3, 5.5),
+      });
+    }
+    this.particles.push({
+      x,
+      y,
+      vx: 0,
+      vy: 0,
+      life: 0.5,
+      maxLife: 0.5,
+      color: "#e8fbff",
+      size: ringSize,
+      ring: true,
+    });
+  }
+
+  private sparkleBurst(x: number, y: number) {    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2 + rnd(-0.2, 0.2);
+      const sp = rnd(30, 90);
+      const life = rnd(0.6, 0.9);
+      this.particles.push({
+        x,
+        y,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp - 20,
+        life,
+        maxLife: life,
+        color: "#ffe9a8",
+        size: rnd(6, 11),
+        star: true,
+      });
+    }
+  }
+
   render(ctx: CanvasRenderingContext2D) {
-    this.drawSky(ctx);
+    this.drawSky(ctx, this.frogState, this.stateTimer, this.sunFlareTimer);
     this.drawPond(ctx);
     for (const b of this.bugs) this.drawBug(ctx, b);
     this.drawTongue(ctx);
@@ -144,17 +243,84 @@ export class Game {
     if (!this.hasCaught && this.elapsed < 6000) this.drawHint(ctx);
   }
 
-  private drawSky(ctx: CanvasRenderingContext2D) {
+  private drawSky(ctx: CanvasRenderingContext2D, frogState: FrogState, stateTimer: number, sunFlare = 0) {
     const sky = ctx.createLinearGradient(0, 0, 0, H);
     sky.addColorStop(0, "#8ed7f5");
     sky.addColorStop(1, "#e8fbff");
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, W, H);
 
+    const happy = frogState === "happy";
+    const happyP = happy ? Math.min(1, 1 - stateTimer / HAPPY_MS) : 1;
+
+    const sunX = W - 90;
+    const sunY = 90;
+    const sunR = 46;
+    const glowBoost = (happy ? 1.35 - 0.25 * happyP : 1) * (1 + 0.2 * Math.min(1, sunFlare));
+    const glowR = sunR * 1.7 * (1 + 0.12 * Math.sin(this.elapsed * 1.4)) * glowBoost;
+    const glow = ctx.createRadialGradient(sunX, sunY, sunR * 0.6, sunX, sunY, glowR);
+    glow.addColorStop(0, "rgba(255, 233, 168, 0.9)");
+    glow.addColorStop(1, "rgba(255, 233, 168, 0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, glowR, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(255, 221, 120, 0.85)";
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    const rayRot = this.elapsed * (happy ? 0.5 : 0.3);
+    const rayLen = (happy ? 1.55 - 0.35 * happyP : 1) * 24;
+    for (let i = 0; i < 8; i++) {
+      const a = rayRot + (i / 8) * Math.PI * 2;
+      const inner = sunR + 10;
+      const outer = sunR + 10 + rayLen;
+      ctx.beginPath();
+      ctx.moveTo(sunX + Math.cos(a) * inner, sunY + Math.sin(a) * inner);
+      ctx.lineTo(sunX + Math.cos(a) * outer, sunY + Math.sin(a) * outer);
+      ctx.stroke();
+    }
+
     ctx.fillStyle = "#ffe9a8";
     ctx.beginPath();
-    ctx.arc(W - 90, 90, 46, 0, Math.PI * 2);
+    ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
     ctx.fill();
+
+    const face = "#7a4a1f";
+    const eyeDX = sunR * 0.32;
+    const eyeY = sunY - sunR * 0.05;
+    const blinkCycle = this.elapsed % 3.5;
+    const blinking = blinkCycle < 0.12;
+    const winking = happy && happyP < 0.25;
+
+    const eyeLine = (cx: number) => {
+      ctx.strokeStyle = face;
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(cx - 5, eyeY + 2);
+      ctx.quadraticCurveTo(cx, eyeY + 6, cx + 5, eyeY + 2);
+      ctx.stroke();
+    };
+
+    [-1, 1].forEach((side, idx) => {
+      const cx = sunX + side * eyeDX;
+      if (blinking || (winking && idx === 0)) {
+        eyeLine(cx);
+      } else {
+        ctx.fillStyle = face;
+        ctx.beginPath();
+        ctx.arc(cx, eyeY, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+
+    ctx.strokeStyle = face;
+    ctx.lineWidth = happy ? 3.5 : 3;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.arc(sunX, sunY + 6, happy ? 22 : 15, Math.PI * 0.15, Math.PI * 0.85);
+    ctx.stroke();
 
     ctx.fillStyle = "#ffffff";
     for (let i = 0; i < 3; i++) {
@@ -193,7 +359,7 @@ export class Game {
       ctx.fillRect(x, y, 26, 2);
     }
 
-    const padX = [110, 640, 700, 180];
+    const padX = [70, 240, 560, 730];
     padX.forEach((x, i) => {
       const bob = Math.sin(this.elapsed * 1.4 + i * 1.9) * 2;
       this.drawLilyPad(ctx, x, WATER_Y + 14 + bob, 40, 13);
@@ -264,6 +430,8 @@ export class Game {
       frogState: this.frogState,
       stateTimer: this.stateTimer,
       elapsed: this.elapsed,
+      catchCount: this.lastCatchCount,
+      variant: this.happyVariant,
     });
   }
 
@@ -271,7 +439,22 @@ export class Game {
     for (const p of this.particles) {
       const t = Math.max(0, p.life / p.maxLife);
       ctx.globalAlpha = t;
-      if (p.ring) {
+      if (p.star) {
+        const r = Math.max(0.5, p.size * t);
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y - r);
+        ctx.lineTo(p.x + r * 0.25, p.y - r * 0.25);
+        ctx.lineTo(p.x + r, p.y);
+        ctx.lineTo(p.x + r * 0.25, p.y + r * 0.25);
+        ctx.lineTo(p.x, p.y + r);
+        ctx.lineTo(p.x - r * 0.25, p.y + r * 0.25);
+        ctx.lineTo(p.x - r, p.y);
+        ctx.lineTo(p.x - r * 0.25, p.y - r * 0.25);
+        ctx.closePath();
+        ctx.stroke();
+      } else if (p.ring) {
         ctx.strokeStyle = p.color;
         ctx.lineWidth = 3 * t + 1;
         ctx.beginPath();

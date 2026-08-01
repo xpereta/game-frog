@@ -7,14 +7,15 @@ export interface FrogDrawState {
   frogState: FrogState;
   stateTimer: number;
   elapsed: number;
+  catchCount?: number;
+  variant?: number;
 }
 
 const HAPPY_MS = 2000;
+const MULTI_SPIN_END = 0.6;
 const BLINK_DURATION = 0.12;
 const HOP_DURATION = 0.45;
 const LICK_DURATION = 0.3;
-const WIGGLE_SPEED = 12;
-const WIGGLE_AMP = 4;
 
 const rnd = (min: number, max: number) => min + Math.random() * (max - min);
 
@@ -47,13 +48,46 @@ export function hopPulseScale(elapsedSinceHop: number, duration = HOP_DURATION):
 
 /**
  * Excited jump for the happy state. `elapsedFraction` is the progress through
- * the happy window (0 → 1); returns a negative (upward) dy. One big springy
- * leap that overshoots and settles.
+ * the happy window (0 → 1); returns a negative (upward) dy. Single catches get
+ * one springy leap that overshoots and settles. Multi-catches (2+ bugs) jump
+ * higher and hover at the peak until the spin completes, then settle back down
+ * without ever dipping below rest.
  */
-export function happyJumpOffset(elapsedFraction: number): number {
+export function happyJumpOffset(elapsedFraction: number, multicatch = false): number {
   const p = Math.min(1, Math.max(0, elapsedFraction));
   if (p <= 0 || p >= 1) return 0;
-  return -Math.sin(p * Math.PI * 3) * 30 * Math.exp(-p * 3);
+  if (multicatch) {
+    const PEAK = 95;
+    const HOLD_AT = 0.35;
+    let lift: number;
+    if (p <= HOLD_AT) {
+      lift = Math.sin((p / HOLD_AT) * (Math.PI / 2)) * PEAK;
+    } else if (p <= MULTI_SPIN_END) {
+      lift = PEAK;
+    } else {
+      const t = (p - MULTI_SPIN_END) / (1 - MULTI_SPIN_END);
+      lift = PEAK * (1 - Math.sin(t * (Math.PI / 2)));
+    }
+    return -lift;
+  }
+  return -Math.sin(p * Math.PI * 3) * 40 * Math.exp(-p * 3);
+}
+
+/**
+ * Rotation for the happy frog: a small side-to-side lean for a single catch,
+ * or a complete 360° spin for a multi-catch. `elapsedFraction` is progress
+ * through the happy window (0 → 1). `variant` (0 → 1) randomizes the lean
+ * direction, phase, and amplitude so each catch looks a little different.
+ */
+export function happyRotation(elapsedFraction: number, multicatch = false, variant = 0): number {
+  const p = Math.min(1, Math.max(0, elapsedFraction));
+  if (p <= 0) return 0;
+  if (multicatch) return Math.min(p / MULTI_SPIN_END, 1) * Math.PI * 2;
+  if (p >= 1) return 0;
+  const v = variant % 1;
+  const amp = 0.12 + v * 0.06;
+  const phase = v * Math.PI * 2;
+  return Math.sin(p * Math.PI * 5 + phase) * amp * Math.exp(-p * 2.5);
 }
 
 function startLick(elapsed: number) {
@@ -62,7 +96,8 @@ function startLick(elapsed: number) {
 }
 
 export function drawFrog(ctx: CanvasRenderingContext2D, state: FrogDrawState) {
-  const { frogState, stateTimer, elapsed } = state;
+  const { frogState, stateTimer, elapsed, catchCount = 1, variant = 0 } = state;
+  const multicatch = catchCount > 1;
 
   if (lastState === "happy" && frogState === "idle") startLick(elapsed);
   lastState = frogState;
@@ -121,7 +156,8 @@ export function drawFrog(ctx: CanvasRenderingContext2D, state: FrogDrawState) {
 
   const happyProgress = frogState === "happy" ? Math.min(1, 1 - stateTimer / HAPPY_MS) : 0;
 
-  ctx.translate(FROG_X, y + (frogState === "happy" ? happyJumpOffset(happyProgress) : 0));
+  ctx.translate(FROG_X, y + (frogState === "happy" ? happyJumpOffset(happyProgress, multicatch) : 0));
+  if (frogState === "happy") ctx.rotate(happyRotation(happyProgress, multicatch, variant));
   ctx.scale(scaleX, scaleY);
   ctx.font = "88px serif";
   ctx.fillText("🐸", 0, 0);
@@ -148,21 +184,26 @@ export function drawTongue(ctx: CanvasRenderingContext2D, tongue: Tongue, elapse
   if (tongue.state === "idle") return;
   const from = mouthY();
   const to = tongueTipY(tongue);
-  const midY = (from + to) / 2;
-  const wobble = tongueTipWobble(elapsed * WIGGLE_SPEED, WIGGLE_AMP);
+  const segments = 14;
+  const creep = tongue.state === "extend" ? 1 : 0.45;
+  const amp = (3 + tongue.len * 0.012) * creep;
 
-  ctx.strokeStyle = "#ff8fb0";
+  const strokeTongue = (color: string, width: number) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    for (let i = 0; i <= segments; i++) {
+      const s = i / segments;
+      const y = from + (to - from) * s;
+      const x = FROG_X + (Math.sin(s * 9 + elapsed * 4) - Math.sin(elapsed * 4)) * amp;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  };
+
   ctx.lineCap = "round";
-  ctx.lineWidth = 12;
-  ctx.beginPath();
-  ctx.moveTo(FROG_X, from);
-  ctx.quadraticCurveTo(FROG_X + wobble * 0.3, midY, FROG_X + wobble, to);
-  ctx.stroke();
-
-  ctx.strokeStyle = "#ff5b94";
-  ctx.lineWidth = 7;
-  ctx.beginPath();
-  ctx.moveTo(FROG_X, from);
-  ctx.quadraticCurveTo(FROG_X + wobble * 0.3, midY, FROG_X + wobble, to);
-  ctx.stroke();
+  ctx.lineJoin = "round";
+  strokeTongue("#ff8fb0", 12);
+  strokeTongue("#ff5b94", 7);
 }

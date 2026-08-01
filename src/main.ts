@@ -25,6 +25,10 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "Space") {
     e.preventDefault();
     fire();
+  } else if (e.key === "z" || e.key === "Z") {
+    game.debugCatch(1);
+  } else if (e.key === "x" || e.key === "X") {
+    game.debugCatch(2);
   }
 });
 

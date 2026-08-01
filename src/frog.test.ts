@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   blinkScale,
   happyJumpOffset,
+  happyRotation,
   hopPulseScale,
   tongueTipWobble,
 } from "./frog";
@@ -59,13 +60,71 @@ describe("happyJumpOffset", () => {
       max = Math.max(max, dy);
     }
     expect(min).toBeLessThan(-15);
-    expect(min).toBeGreaterThan(-35);
+    expect(min).toBeGreaterThan(-40);
     expect(max).toBeGreaterThan(0);
-    expect(max).toBeLessThan(8);
+    expect(max).toBeLessThan(10);
+  });
+
+  it("jumps noticeably higher for a multi-catch", () => {
+    let singleMin = 0;
+    let multiMin = 0;
+    for (let i = 0; i < 100; i++) {
+      singleMin = Math.min(singleMin, happyJumpOffset(i / 100));
+      multiMin = Math.min(multiMin, happyJumpOffset(i / 100, true));
+    }
+    expect(multiMin).toBeLessThan(singleMin * 1.4);
+    expect(multiMin).toBeLessThan(-30);
+    expect(multiMin).toBeGreaterThan(-110);
+  });
+
+  it("never dips below rest for a multi-catch", () => {
+    for (let i = 0; i < 100; i++) {
+      expect(happyJumpOffset(i / 100, true)).toBeLessThanOrEqual(0);
+    }
+    expect(happyJumpOffset(0.5, true)).toBeLessThan(-15);
+  });
+
+  it("hovers at the peak until the spin completes, then settles", () => {
+    expect(happyJumpOffset(0.45, true)).toBeLessThanOrEqual(-80);
+    expect(happyJumpOffset(0.6, true)).toBeLessThanOrEqual(-80);
+    expect(happyJumpOffset(0.9, true)).toBeGreaterThan(-40);
+    expect(happyJumpOffset(1, true)).toBeCloseTo(0, 5);
   });
 
   it("clamps out-of-range progress", () => {
     expect(happyJumpOffset(-1)).toBe(0);
     expect(happyJumpOffset(2)).toBeCloseTo(0, 5);
+    expect(happyJumpOffset(2, true)).toBeCloseTo(0, 5);
+  });
+});
+
+describe("happyRotation", () => {
+  it("rocks gently side to side for a single catch and returns upright", () => {
+    expect(happyRotation(0)).toBe(0);
+    expect(happyRotation(1)).toBe(0);
+    let maxAbs = 0;
+    for (let i = 0; i < 100; i++) {
+      const r = happyRotation(i / 100);
+      expect(Math.abs(r)).toBeLessThan(0.25);
+      maxAbs = Math.max(maxAbs, Math.abs(r));
+    }
+    expect(maxAbs).toBeGreaterThan(0.02);
+  });
+
+  it("spins a complete 360° for a multi-catch", () => {
+    expect(happyRotation(0, true)).toBe(0);
+    expect(happyRotation(1, true)).toBeCloseTo(Math.PI * 2, 5);
+    const mid = happyRotation(0.5, true);
+    expect(mid).toBeGreaterThan(0);
+    expect(mid).toBeLessThan(Math.PI * 2);
+  });
+
+  it("finishes the multi-catch spin by 60% of the window", () => {
+    expect(happyRotation(0.6, true)).toBeCloseTo(Math.PI * 2, 5);
+    expect(happyRotation(1, true)).toBeCloseTo(Math.PI * 2, 5);
+  });
+
+  it("leans in a different direction depending on variant", () => {
+    expect(Math.sign(happyRotation(0.1))).not.toBe(Math.sign(happyRotation(0.1, false, 0.5)));
   });
 });
