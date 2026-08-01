@@ -1,15 +1,9 @@
 import { Sound } from "./audio";
-import { FROG_X, FROG_Y, H, W, WATER_Y } from "./consts";
+import { FROG_X, H, W, WATER_Y } from "./consts";
 import { BUG_SPECIES, bugY, facingSign, isOffScreen, spawnBug, updateBug } from "./bugs";
 import type { Bug } from "./bugs";
-import {
-  createTongue,
-  fireTongue,
-  mouthY,
-  tongueHitsFly,
-  tongueTipY,
-  updateTongue,
-} from "./tongue";
+import { drawFrog, drawTongue } from "./frog";
+import { createTongue, fireTongue, tongueHitsFly, updateTongue } from "./tongue";
 
 type FrogState = "idle" | "happy" | "sad";
 
@@ -234,55 +228,15 @@ export class Game {
   }
 
   private drawTongue(ctx: CanvasRenderingContext2D) {
-    if (this.tongue.state === "idle") return;
-    const from = mouthY();
-    const to = tongueTipY(this.tongue);
-    ctx.strokeStyle = "#ff8fb0";
-    ctx.lineCap = "round";
-    ctx.lineWidth = 12;
-    ctx.beginPath();
-    ctx.moveTo(FROG_X, from);
-    ctx.lineTo(FROG_X, to);
-    ctx.stroke();
-    ctx.strokeStyle = "#ff5b94";
-    ctx.lineWidth = 7;
-    ctx.beginPath();
-    ctx.moveTo(FROG_X, from);
-    ctx.lineTo(FROG_X, to);
-    ctx.stroke();
+    drawTongue(ctx, this.tongue, this.elapsed);
   }
 
   private drawFrog(ctx: CanvasRenderingContext2D) {
-    const bob = Math.sin(this.elapsed * 2.4) * 3;
-    const y = FROG_Y + bob;
-    ctx.save();
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-
-    if (this.frogState === "sad") {
-      ctx.translate(FROG_X, y);
-      ctx.rotate(0.08);
-      ctx.font = "88px serif";
-      ctx.fillText("🐸", 0, 0);
-      ctx.font = "26px serif";
-      ctx.fillText("💧", 34, -18);
-      ctx.restore();
-      return;
-    }
-
-    ctx.font = "88px serif";
-    ctx.fillText("🐸", FROG_X, y);
-
-    if (this.frogState === "happy") {
-      const t = this.stateTimer / HAPPY_MS;
-      ctx.font = "24px serif";
-      const spread = 46 + (1 - t) * 40;
-      ctx.fillText("✨", FROG_X - spread, y - 52);
-      ctx.fillText("✨", FROG_X + spread, y - 30);
-      ctx.fillText("💖", FROG_X - 30, y - 58);
-      ctx.fillText("😄", FROG_X + 22, y - 60);
-    }
-    ctx.restore();
+    drawFrog(ctx, {
+      frogState: this.frogState,
+      stateTimer: this.stateTimer,
+      elapsed: this.elapsed,
+    });
   }
 
   private drawParticles(ctx: CanvasRenderingContext2D) {
