@@ -40,6 +40,24 @@ export class Sound {
     this.playCatchFor("fly");
   }
 
+  playLunge() {
+    const ctx = this.ensureCtx();
+    if (!ctx) return;
+    ctx.resume();
+    const t = ctx.currentTime + 0.01;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(150, t);
+    osc.frequency.exponentialRampToValueAtTime(560, t + 0.09);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.12, t + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.12);
+  }
+
   playCatchFor(species: BugSpecies) {
     const ctx = this.ensureCtx();
     if (!ctx) return;

@@ -46,13 +46,14 @@ export function hopPulseScale(elapsedSinceHop: number, duration = HOP_DURATION):
 }
 
 /**
- * Springy vertical bounce for the happy state. `elapsedFraction` is the
- * progress through the happy window (0 → 1); returns a negative (upward) dy.
+ * Excited jump for the happy state. `elapsedFraction` is the progress through
+ * the happy window (0 → 1); returns a negative (upward) dy. One big springy
+ * leap that overshoots and settles.
  */
-export function happyBounceOffset(elapsedFraction: number): number {
+export function happyJumpOffset(elapsedFraction: number): number {
   const p = Math.min(1, Math.max(0, elapsedFraction));
   if (p <= 0 || p >= 1) return 0;
-  return -Math.sin(p * Math.PI * 2) * 7 * Math.exp(-p * 3);
+  return -Math.sin(p * Math.PI * 3) * 30 * Math.exp(-p * 3);
 }
 
 function startLick(elapsed: number) {
@@ -120,7 +121,7 @@ export function drawFrog(ctx: CanvasRenderingContext2D, state: FrogDrawState) {
 
   const happyProgress = frogState === "happy" ? Math.min(1, 1 - stateTimer / HAPPY_MS) : 0;
 
-  ctx.translate(FROG_X, y + (frogState === "happy" ? happyBounceOffset(happyProgress) : 0));
+  ctx.translate(FROG_X, y + (frogState === "happy" ? happyJumpOffset(happyProgress) : 0));
   ctx.scale(scaleX, scaleY);
   ctx.font = "88px serif";
   ctx.fillText("🐸", 0, 0);
@@ -128,9 +129,7 @@ export function drawFrog(ctx: CanvasRenderingContext2D, state: FrogDrawState) {
   if (frogState === "happy") {
     const spread = 46 + happyProgress * 40;
     ctx.font = "24px serif";
-    ctx.fillText("✨", -spread, -52);
     ctx.fillText("✨", spread, -30);
-    ctx.fillText("💖", -30, -58);
     ctx.fillText("😄", 22, -60);
   }
 

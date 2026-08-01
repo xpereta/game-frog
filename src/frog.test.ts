@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   blinkScale,
-  happyBounceOffset,
+  happyJumpOffset,
   hopPulseScale,
   tongueTipWobble,
 } from "./frog";
@@ -47,24 +47,25 @@ describe("hopPulseScale", () => {
   });
 });
 
-describe("happyBounceOffset", () => {
-  it("starts and ends at rest with a springy upward swing of a few px", () => {
-    expect(happyBounceOffset(0)).toBe(0);
-    expect(happyBounceOffset(1)).toBeCloseTo(0, 5);
+describe("happyJumpOffset", () => {
+  it("starts and ends at rest with a big upward jump and a small overshoot", () => {
+    expect(happyJumpOffset(0)).toBe(0);
+    expect(happyJumpOffset(1)).toBeCloseTo(0, 5);
     let min = 0;
     let max = 0;
     for (let i = 0; i < 100; i++) {
-      const dy = happyBounceOffset(i / 100);
+      const dy = happyJumpOffset(i / 100);
       min = Math.min(min, dy);
       max = Math.max(max, dy);
     }
-    expect(min).toBeGreaterThan(-5);
-    expect(min).toBeLessThan(-2);
-    expect(max).toBeLessThan(1);
+    expect(min).toBeLessThan(-15);
+    expect(min).toBeGreaterThan(-35);
+    expect(max).toBeGreaterThan(0);
+    expect(max).toBeLessThan(8);
   });
 
   it("clamps out-of-range progress", () => {
-    expect(happyBounceOffset(-1)).toBe(0);
-    expect(happyBounceOffset(2)).toBeCloseTo(0, 5);
+    expect(happyJumpOffset(-1)).toBe(0);
+    expect(happyJumpOffset(2)).toBeCloseTo(0, 5);
   });
 });

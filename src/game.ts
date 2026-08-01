@@ -45,6 +45,7 @@ export class Game {
     this.audio.unlock();
     if (this.tongue.state !== "idle") return;
     fireTongue(this.tongue);
+    this.audio.playLunge();
     this.caughtThisLunge = false;
   }
 

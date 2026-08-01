@@ -9,12 +9,14 @@ export interface BugSpeciesConfig {
   fontSize: number;
   /** "side": profile emoji, flip horizontally to face travel. "top": top-down emoji, rotate ±90° to face travel. */
   view: "side" | "top";
+  /** True if the emoji glyph natively faces left (e.g. Apple's 🐝); flip it when moving right. */
+  flipToFaceRight: boolean;
 }
 
 export const BUG_SPECIES: Record<BugSpecies, BugSpeciesConfig> = {
-  fly: { emoji: "🪰", minSpeed: 70, maxSpeed: 190, fontSize: 52, view: "top" },
-  ladybug: { emoji: "🐞", minSpeed: 45, maxSpeed: 110, fontSize: 44, view: "top" },
-  bee: { emoji: "🐝", minSpeed: 110, maxSpeed: 240, fontSize: 60, view: "side" },
+  fly: { emoji: "🪰", minSpeed: 70, maxSpeed: 190, fontSize: 52, view: "top", flipToFaceRight: false },
+  ladybug: { emoji: "🐞", minSpeed: 45, maxSpeed: 110, fontSize: 44, view: "top", flipToFaceRight: false },
+  bee: { emoji: "🐝", minSpeed: 110, maxSpeed: 240, fontSize: 60, view: "side", flipToFaceRight: true },
 };
 
 const SPECIES: BugSpecies[] = ["fly", "ladybug", "bee"];
@@ -92,7 +94,9 @@ export interface BugRenderTransform {
 
 export function bugRenderTransform(b: Bug): BugRenderTransform {
   const dir = Math.sign(b.vx);
-  return BUG_SPECIES[b.species].view === "top"
-    ? { flip: false, angle: dir * (Math.PI / 2) }
-    : { flip: dir < 0, angle: 0 };
+  if (BUG_SPECIES[b.species].view === "top") {
+    return { flip: false, angle: dir * (Math.PI / 2) };
+  }
+  const faceRight = BUG_SPECIES[b.species].flipToFaceRight;
+  return { flip: faceRight ? dir > 0 : dir < 0, angle: 0 };
 }

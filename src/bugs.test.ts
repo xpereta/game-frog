@@ -65,12 +65,12 @@ describe("bugRenderTransform", () => {
     expect(bugRenderTransform(fly)).toEqual({ flip: false, angle: -Math.PI / 2 });
   });
 
-  it("flips side-view bugs horizontally when moving left", () => {
+  it("flips side-view bugs so the head leads travel (Apple bee faces left)", () => {
     const bee = spawnBug("bee");
     bee.vx = 120;
-    expect(bugRenderTransform(bee)).toEqual({ flip: false, angle: 0 });
-    bee.vx = -120;
     expect(bugRenderTransform(bee)).toEqual({ flip: true, angle: 0 });
+    bee.vx = -120;
+    expect(bugRenderTransform(bee)).toEqual({ flip: false, angle: 0 });
   });
 
   it("marks fly and ladybug as top-down, bee as side", () => {
