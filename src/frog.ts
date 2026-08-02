@@ -259,7 +259,7 @@ export function drawFrog(ctx: CanvasRenderingContext2D, state: FrogDrawState) {
     ctx.rotate(0.08);
     ctx.scale(fatScaleX, fatScaleY);
     drawFrogSprite(ctx);
-    ctx.scale(fatScaleY / fatScaleX, fatScaleX / fatScaleY);
+    ctx.scale(fatScaleY / fatScaleX, 1);
     drawGlyphSprite(ctx, "💧", 26, 34, -18);
     ctx.restore();
     return;
@@ -297,9 +297,9 @@ export function drawFrog(ctx: CanvasRenderingContext2D, state: FrogDrawState) {
   if (frogState === "happy") ctx.rotate(happyRotation(happyProgress, multicatch, variant));
   ctx.scale(scaleX, scaleY);
   drawFrogSprite(ctx);
-  // Cancel the frog's non-uniform scale so the surrounding emojis stay
-  // proportional (uniform scale = scaleY) instead of squishing with fatness.
-  ctx.scale(scaleY / scaleX, scaleX / scaleY);
+  // Cancel only the frog's width stretch so the surrounding emojis render at
+  // the frog's uniform height scale (scaleY) and keep their aspect ratio.
+  ctx.scale(scaleY / scaleX, 1);
 
   if (frogState === "happy") {
     const spread = 46 + happyProgress * 40;
