@@ -17,26 +17,84 @@ const SPECIES_JINGLE: Record<BugSpecies, SpeciesJingle> = {
 
 export class Sound {
   private ctx: AudioContext | null = null;
+  private silentLoop: HTMLAudioElement | null = null;
+
+  private createCtx(): AudioContext | null {
+    const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctor) return null;
+    const ctx = new Ctor();
+    ctx.onstatechange = () => {
+      if (ctx.state === "suspended") void ctx.resume().catch(() => {});
+    };
+    return ctx;
+  }
 
   private ensureCtx(): AudioContext | null {
-    if (!this.ctx) {
-      const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!Ctor) return null;
-      this.ctx = new Ctor();
-      this.ctx.onstatechange = () => {
-        if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
-      };
-    }
+    if (!this.ctx) this.ctx = this.createCtx();
     return this.ctx;
+  }
+
+  /** Called from a user gesture. Returns a context that can play, recreating it
+   *  if iOS left the previous one stuck (state stays "suspended" or the non-
+   *  standard "interrupted" after `resume()`, an iOS 18+ quirk). */
+  private ensureRunning(): AudioContext | null {
+    const ctx = this.ensureCtx();
+    if (!ctx) return null;
+    if (ctx.state === "running") {
+      this.prime(ctx);
+      return ctx;
+    }
+    void ctx.resume().catch(() => {});
+    this.prime(ctx);
+    if (ctx.state === "interrupted") {
+      this.recreate(ctx);
+    } else {
+      window.setTimeout(() => {
+        if (this.ctx === ctx && ctx.state !== "running") this.recreate(ctx);
+      }, 150);
+    }
+    return ctx;
+  }
+
+  /** Discard a context iOS has left stuck; a fresh one is created and resumed
+   *  on the next user gesture. */
+  private recreate(stale: AudioContext) {
+    if (this.ctx !== stale) return;
+    this.ctx = null;
+    try {
+      void stale.close().catch(() => {});
+    } catch {
+      /* ignore */
+    }
+    console.debug("[audio] recreated stuck context");
   }
 
   /** Call from a user gesture. Resumes and primes the context (required on iOS). */
   unlock() {
-    const ctx = this.ensureCtx();
+    const ctx = this.ensureRunning();
     if (!ctx) return;
-    if (ctx.state !== "running") ctx.resume();
-    this.prime(ctx);
     console.debug("[audio] unlock state:", ctx.state);
+    this.enableIOSSession();
+  }
+
+  /** iOS ringer/mute switch silences WebAudio. Request a playback media session
+   *  (Safari iOS 17+) and loop a silent <audio> element to keep the session alive. */
+  private enableIOSSession() {
+    try {
+      const audioSession = (navigator as unknown as { audioSession?: { type?: string } }).audioSession;
+      if (audioSession) audioSession.type = "playback";
+    } catch {
+      /* ignore */
+    }
+    if (this.silentLoop) return;
+    try {
+      const loop = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=");
+      loop.loop = true;
+      void loop.play().catch(() => {});
+      this.silentLoop = loop;
+    } catch {
+      /* ignore */
+    }
   }
 
   /** iOS keeps a fresh context "suspended" until audio actually plays in the gesture.
@@ -54,9 +112,8 @@ export class Sound {
   }
 
   playLunge() {
-    const ctx = this.ensureCtx();
+    const ctx = this.ensureRunning();
     if (!ctx) return;
-    ctx.resume();
     const t = ctx.currentTime + 0.01;
 
     const swoosh = ctx.createOscillator();
@@ -85,9 +142,8 @@ export class Sound {
   }
 
   playCatchFor(species: BugSpecies) {
-    const ctx = this.ensureCtx();
+    const ctx = this.ensureRunning();
     if (!ctx) return;
-    ctx.resume();
     console.debug("[audio] playCatchFor state:", ctx.state);
     const cfg = SPECIES_JINGLE[species];
     const root = 2 ** pick(cfg.roots);
@@ -104,9 +160,8 @@ export class Sound {
 
   /** Bright rising "ping-up" sparkle layered on the jingle for high strikes. */
   playReach(alt: number) {
-    const ctx = this.ensureCtx();
+    const ctx = this.ensureRunning();
     if (!ctx) return;
-    ctx.resume();
     const t = ctx.currentTime + 0.02;
     const base = 520 + alt * 280;
     this.pluck(base, t, 0.12, "sine", 0.16);
@@ -116,9 +171,8 @@ export class Sound {
 
   /** Short tactile snatch when the tongue first touches a bug. */
   playGrab(species: BugSpecies) {
-    const ctx = this.ensureCtx();
+    const ctx = this.ensureRunning();
     if (!ctx) return;
-    ctx.resume();
     const t = ctx.currentTime + 0.02;
     switch (species) {
       case "fly":
@@ -136,9 +190,8 @@ export class Sound {
   }
 
   playMiss() {
-    const ctx = this.ensureCtx();
+    const ctx = this.ensureRunning();
     if (!ctx) return;
-    ctx.resume();
     console.debug("[audio] playMiss state:", ctx.state);
     const t = ctx.currentTime + 0.02;
     this.pluck(392, t, 0.14, "sine");

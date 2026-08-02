@@ -33,7 +33,7 @@ Always run `npm run typecheck && npm run test && npm run build` after changes.
 | `src/tongue.ts` | Tongue state machine + geometry: `createTongue`, `fireTongue`, `updateTongue(t, dt, carry)`, `mouthY()`, `altitudeFor(y)`, `tongueTipY(t)`, `tongueHitsBug` |
 | `src/bugs.ts` | Bug species config + behavior: `spawnBug`, `updateBug`, `bugY`, `isOffScreen`, `bugRenderTransform`, `grabbedY` override |
 | `src/frog.ts` | Frog/tongue drawing + animation curves: `drawFrog`, `drawTongue` (sneak wave), `happyJumpOffset`, `happyRotation`, `blinkScale`, `hopPulseScale` |
-| `src/audio.ts` | Procedural Web Audio: `Sound` class — `playLunge`, `playGrab(species)`, `playCatchFor(species)`, `playReach(alt)`, `playMiss`, `unlock`, private `pluck`/`thump` |
+| `src/audio.ts` | Procedural Web Audio: `Sound` class — `playLunge`, `playGrab(species)`, `playCatchFor(species)`, `playReach(alt)`, `playMiss`, `unlock`, private `ensureRunning`/`recreate`/`enableIOSSession`/`prime`, `pluck`/`thump` |
 | `src/hud.ts` | Streak rank emojis: `rankForStreak`, `bestStreakAfter`, `drawHud` |
 
 ## Current gameplay mechanics
@@ -90,14 +90,15 @@ Always run `npm run typecheck && npm run test && npm run build` after changes.
 - Sound works on desktop Safari/Chrome; on iOS it needed: silent-buffer prime +
   non-awaiting `playLunge` + first-gesture unlock. Currently working on iOS.
 - Known flaky areas, do not reintroduce:
-  - `pointerdown` is an unreliable unlock gesture on iOS (use `touchend`/
-    `click`/`mousedown`/`keyup` sets if needed).
-  - iOS **ringer/mute switch silences WebAudio** — fix is a silent looping
-    `<audio>` element and/or `navigator.audioSession.type = "playback"`
-    (Safari iOS 17+, not yet implemented).
+  - `pointerdown` is an unreliable unlock gesture on iOS; `main.ts` unlocks on
+    a `pointerdown`/`touchend`/`click`/`mousedown`/`keydown` set — keep them.
+  - iOS **ringer/mute switch silences WebAudio** — handled by
+    `Sound.enableIOSSession()`: a silent looping `<audio>` element plus
+    `navigator.audioSession.type = "playback"` (Safari iOS 17+).
   - iOS 18+ `AudioContext.resume()` can leave the context `"suspended"`/non-
-    standard `"interrupted"`; robust fix is recreating the context on the next
-    gesture (not yet implemented).
+    standard `"interrupted"` — handled by `Sound.ensureRunning()`/`recreate()`:
+    if `resume()` hasn't flipped the state to `"running"`, the stuck context
+    is closed and recreated on the next user gesture.
 - **User rejected altitude-scaled pitch/loudness of the catch jingle twice.**
   Keep the jingle fixed; reach is a separate sparkle layer (`playReach`), never
   change the jingle's pitch by altitude.

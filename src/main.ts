@@ -22,13 +22,12 @@ fit();
 
 const fire = () => game.fire();
 
+const UNLOCK_GESTURES = ["pointerdown", "touchend", "click", "mousedown", "keydown"] as const;
 const unlockOnce = () => {
   game.unlockAudio();
-  window.removeEventListener("pointerdown", unlockOnce);
-  window.removeEventListener("keydown", unlockOnce);
+  for (const type of UNLOCK_GESTURES) window.removeEventListener(type, unlockOnce);
 };
-window.addEventListener("pointerdown", unlockOnce);
-window.addEventListener("keydown", unlockOnce);
+for (const type of UNLOCK_GESTURES) window.addEventListener(type, unlockOnce);
 
 window.addEventListener("keydown", (e) => {
   if (e.code === "Space") {
