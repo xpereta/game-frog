@@ -198,6 +198,17 @@ export class Sound {
     this.pluck(311, t + 0.12, 0.18, "sine");
   }
 
+  /** Festive fanfare when the frog first reaches full fatness. */
+  playMaxFat() {
+    const ctx = this.ensureRunning();
+    if (!ctx) return;
+    const t = ctx.currentTime + 0.02;
+    this.thump(t, 150, 0.3, 0.3);
+    const notes = [392, 523.25, 659.25, 784];
+    notes.forEach((f, i) => this.pluck(f, t + i * 0.1, 0.3, "triangle", 0.22));
+    this.pluck(1046.5, t + notes.length * 0.1, 0.5, "triangle", 0.2);
+  }
+
   private pluck(freq: number, at: number, dur: number, type: OscillatorType = "triangle", peak = 0.28) {
     const ctx = this.ctx!;
     const osc = ctx.createOscillator();

@@ -40,6 +40,10 @@ compete.
   maximum, and a miss makes it deflate smoothly back to normal (animated, not
   an instant snap). Each swallow plays a quick squash-and-stretch "eat" pop.
   Purely visual — it never affects gameplay.
+- The first time your streak reaches the fatness cap, the frog celebrates: a
+  golden fanfare, a gold particle burst and sun flare, and its happy reaction
+  upgrades to the big jump with a full spin. While at max fatness it radiates a
+  subtle gold sparkle aura that fades away when a miss deflates it.
 - High catches add more: grabbing a bug above half reach plays a bright
   sparkle ping; grabbing one near the top fires gold star particles and a
   sun flare.

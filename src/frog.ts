@@ -25,6 +25,8 @@ export interface FrogDrawState {
   fatness?: number;
   /** `elapsed` timestamp of the last swallow; used to time the eat-pop squash. */
   eatPopAt?: number;
+  /** True during the one-shot max-fatness celebration (big jump + full spin). */
+  celebrate?: boolean;
 }
 
 const HAPPY_MS = 2000;
@@ -223,8 +225,8 @@ function drawFrogSprite(ctx: CanvasRenderingContext2D) {
 }
 
 export function drawFrog(ctx: CanvasRenderingContext2D, state: FrogDrawState) {
-  const { frogState, stateTimer, elapsed, catchCount = 1, variant = 0, fatness = 0, eatPopAt = -1 } = state;
-  const multicatch = catchCount > 1;
+  const { frogState, stateTimer, elapsed, catchCount = 1, variant = 0, fatness = 0, eatPopAt = -1, celebrate = false } = state;
+  const multicatch = catchCount > 1 || celebrate;
   const fatScaleX = frogWidthScale(fatness);
   const fatScaleY = frogHeightScale(fatness);
 

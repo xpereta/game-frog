@@ -1,5 +1,5 @@
 import { Sound } from "./audio";
-import { FROG_X, H, W, WATER_Y } from "./consts";
+import { AURA_MIN_FATNESS, AURA_SPAWN_INTERVAL, FATNESS_CAP, FROG_R, FROG_X, FROG_Y, H, W, WATER_Y } from "./consts";
 import { BUG_SPECIES, bugRenderTransform, bugY, isOffScreen, spawnBug, updateBug } from "./bugs";
 import type { Bug } from "./bugs";
 import { drawFrog, drawTongue, easeFatness, frogFatness, happyJumpOffset } from "./frog";
@@ -48,6 +48,9 @@ export class Game {
   private bestStreak = 0;
   private eatPopAt = -1;
   private fatness = 0;
+  private maxCelebrated = false;
+  private celebrateMoment = false;
+  private auraTimer = 0;
 
   fire() {
     this.audio.unlock();
@@ -86,6 +89,40 @@ export class Game {
     this.cloudOffset += dt * 8;
     if (this.sunFlareTimer > 0) this.sunFlareTimer -= dt;
     this.fatness = easeFatness(this.fatness, frogFatness(this.streak), dt);
+
+    if (!this.maxCelebrated && this.streak >= FATNESS_CAP) {
+      this.maxCelebrated = true;
+      this.celebrateMoment = true;
+      this.audio.playMaxFat();
+      this.burst(FROG_X, mouthY() - 12, 1);
+      this.sparkleBurst(FROG_X, mouthY() - 12);
+      this.sunFlareTimer = 1;
+      if (this.frogState !== "happy") {
+        this.frogState = "happy";
+        this.stateTimer = HAPPY_MS;
+        this.frogAirborneMs = 0;
+      }
+    }
+
+    if (this.fatness > AURA_MIN_FATNESS) {
+      this.auraTimer -= dt;
+      if (this.auraTimer <= 0) {
+        this.auraTimer = AURA_SPAWN_INTERVAL;
+        const a = Math.random() * Math.PI * 2;
+        const r = rnd(FROG_R, FROG_R * 1.8);
+        this.particles.push({
+          x: FROG_X + Math.cos(a) * r,
+          y: FROG_Y - 6 + Math.sin(a) * r * 0.5,
+          vx: rnd(-8, 8),
+          vy: rnd(-30, -12),
+          life: rnd(0.7, 1.1),
+          maxLife: 1.1,
+          color: "#ffd700",
+          size: rnd(3, 5),
+          star: true,
+        });
+      }
+    }
 
     const missed = updateTongue(this.tongue, dt, this.grabbed.length > 0);
 
@@ -161,11 +198,16 @@ export class Game {
 
     if (this.frogState !== "idle") {
       this.stateTimer -= dt * 1000;
-      if (this.stateTimer <= 0) this.frogState = "idle";
+      if (this.stateTimer <= 0) {
+        this.frogState = "idle";
+        this.celebrateMoment = false;
+      }
     }
 
     const happyP = this.frogState === "happy" ? Math.min(1, 1 - this.stateTimer / HAPPY_MS) : 0;
-    const frogOffset = this.frogState === "happy" ? happyJumpOffset(happyP, this.lastCatchCount > 1) : 0;
+    const frogOffset = this.frogState === "happy"
+      ? happyJumpOffset(happyP, this.lastCatchCount > 1 || this.celebrateMoment)
+      : 0;
     if (frogOffset < -8) {
       this.frogAirborneMs += dt * 1000;
     } else {
@@ -471,6 +513,7 @@ export class Game {
       variant: this.happyVariant,
       fatness: this.fatness,
       eatPopAt: this.eatPopAt,
+      celebrate: this.celebrateMoment,
     });
   }
 

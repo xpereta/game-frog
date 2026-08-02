@@ -27,13 +27,13 @@ Always run `npm run typecheck && npm run test && npm run build` after changes.
 
 | File | Role |
 | --- | --- |
-| `src/consts.ts` | `W=800`, `H=600`, `TONGUE_SPEED=600`, `TONGUE_REACH=430`, `FROG_X`, `FROG_Y`, `FROG_R`, `WATER_Y=500`; fatness tunables `FATNESS_CAP=15`, `FATNESS_WIDTH_MAX=2.2`, `FATNESS_HEIGHT_MAX=1.3`, `FATNESS_EASE=4`, `EAT_POP_DURATION=0.35`, `EAT_POP_WIDTH=0.22`, `EAT_POP_HEIGHT=0.12`; frog sprite res `FROG_SPRITE=1024`, `FROG_SPRITE_FONT=704` |
+| `src/consts.ts` | `W=800`, `H=600`, `TONGUE_SPEED=600`, `TONGUE_REACH=430`, `FROG_X`, `FROG_Y`, `FROG_R`, `WATER_Y=500`; fatness tunables `FATNESS_CAP=15`, `FATNESS_WIDTH_MAX=2.2`, `FATNESS_HEIGHT_MAX=1.3`, `FATNESS_EASE=4`, `AURA_MIN_FATNESS=0.8`, `AURA_SPAWN_INTERVAL=0.15`, `EAT_POP_DURATION=0.35`, `EAT_POP_WIDTH=0.22`, `EAT_POP_HEIGHT=0.12`; frog sprite res `FROG_SPRITE=1024`, `FROG_SPRITE_FONT=704` |
 | `src/main.ts` | Canvas setup, DPR scaling, input (`Space`/`window` pointerdown fire, debug keys), audio unlock listeners |
 | `src/game.ts` | `Game` class: loop, states (`idle`/`happy`/`sad`), particles, grabbed bugs, sun, pond, HUD |
 | `src/tongue.ts` | Tongue state machine + geometry: `createTongue`, `fireTongue`, `updateTongue(t, dt, carry)`, `mouthY()`, `altitudeFor(y)`, `tongueTipY(t)`, `tongueHitsBug` |
 | `src/bugs.ts` | Bug species config + behavior: `spawnBug`, `updateBug`, `bugY`, `isOffScreen`, `bugRenderTransform`, `grabbedY` override |
 | `src/frog.ts` | Frog/tongue drawing + animation curves: `drawFrog`, `drawTongue` (sneak wave), `happyJumpOffset`, `happyRotation`, `blinkScale`, `hopPulseScale`, `frogFatness`, `frogWidthScale`, `frogHeightScale`, `easeFatness` (smooth inflate/deflate), `eatPopScale`. Emoji glyphs are pre-rendered to offscreen sprites (`getFrogSprite`/`drawGlyphSprite`) and composited with `drawImage` — per-frame `fillText` of color emoji under non-uniform/rotating transforms re-rasterizes every frame and pegs CPU on Chrome/macOS (do not regress) |
-| `src/audio.ts` | Procedural Web Audio: `Sound` class — `playLunge`, `playGrab(species)`, `playCatchFor(species)`, `playReach(alt)`, `playMiss`, `unlock`, private `ensureRunning`/`recreate`/`enableIOSSession`/`prime`, `pluck`/`thump` |
+| `src/audio.ts` | Procedural Web Audio: `Sound` class — `playLunge`, `playGrab(species)`, `playCatchFor(species)`, `playReach(alt)`, `playMiss`, `playMaxFat`, `unlock`, private `ensureRunning`/`recreate`/`enableIOSSession`/`prime`, `pluck`/`thump` |
 | `src/hud.ts` | Streak rank emojis: `rankForStreak`, `bestStreakAfter`, `drawHud` |
 
 ## Current gameplay mechanics
@@ -69,9 +69,15 @@ Always run `npm run typecheck && npm run test && npm run build` after changes.
   `FATNESS_EASE`), so a miss deflates the frog smoothly instead of snapping.
   The 🐸 glyph scales to `frogWidthScale`/`frogHeightScale`
   (×`FATNESS_WIDTH_MAX` wide at max). A swallow fires `eatPopAt` → `eatPopScale`
-  squash-stretch. Surrounding emojis (💧✨😄😝) are drawn under a uniform scale
+  squash-stretch.   Surrounding emojis (💧✨😄😝) are drawn under a uniform scale
   so they keep their aspect ratio while the frog alone stretches. Purely
   visual.
+- **Max-fatness moment:** the first time the streak hits `FATNESS_CAP` each
+  session → one-shot golden celebration (`playMaxFat` fanfare, gold burst,
+  sun flare, and `celebrateMoment` upgrades the happy reaction to the big
+  multi-catch jump/spin). While shown fatness is above `AURA_MIN_FATNESS`, the
+  frog emits a gold sparkle aura every `AURA_SPAWN_INTERVAL`, fading out as a
+  miss deflates it.
 - **Debug keys** (`src/main.ts`): `Z` → `debugCatch(1)`, `X` → `debugCatch(2)`
   to test single and multi-catch without waiting for bugs.
 
