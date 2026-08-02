@@ -41,7 +41,7 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
-canvas.addEventListener("pointerdown", fire);
+window.addEventListener("pointerdown", fire);
 
 let last = performance.now();
 function frame(now: number) {

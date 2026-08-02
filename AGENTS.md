@@ -28,7 +28,7 @@ Always run `npm run typecheck && npm run test && npm run build` after changes.
 | File | Role |
 | --- | --- |
 | `src/consts.ts` | `W=800`, `H=600`, `TONGUE_SPEED=600`, `TONGUE_REACH=430`, `FROG_X`, `FROG_Y`, `FROG_R`, `WATER_Y=500` |
-| `src/main.ts` | Canvas setup, DPR scaling, input (`Space`/`pointerdown` fire), debug keys, audio unlock listeners |
+| `src/main.ts` | Canvas setup, DPR scaling, input (`Space`/`window` pointerdown fire, debug keys), audio unlock listeners |
 | `src/game.ts` | `Game` class: loop, states (`idle`/`happy`/`sad`), particles, grabbed bugs, sun, pond, HUD |
 | `src/tongue.ts` | Tongue state machine + geometry: `createTongue`, `fireTongue`, `updateTongue(t, dt, carry)`, `mouthY()`, `altitudeFor(y)`, `tongueTipY(t)`, `tongueHitsBug` |
 | `src/bugs.ts` | Bug species config + behavior: `spawnBug`, `updateBug`, `bugY`, `isOffScreen`, `bugRenderTransform`, `grabbedY` override |
@@ -78,6 +78,12 @@ Always run `npm run typecheck && npm run test && npm run build` after changes.
   audio, or commands must update the matching doc in the same change — `spec.md`
   (rules/feel/visuals) or this file (architecture table, mechanics). Behavior-
   neutral bug fixes need no doc update.
+
+- **iOS zoom/pull-to-refresh are disabled on purpose** (game-breaking): viewport
+  meta `maximum-scale=1, user-scalable=no`, `touch-action: none` and
+  `overscroll-behavior: none` on `html, body`. Do not remove; it's what makes
+  tap/pinch gestures play the game instead of zooming. The fire target is the
+  whole window so the letterbox around the canvas is also a tap target.
 
 ## Audio gotchas (iOS Safari) — DO NOT regress
 

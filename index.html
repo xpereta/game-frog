@@ -2,16 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Tongue Catch</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐸</text></svg>" />
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body { height: 100%; }
+      html, body {
+        height: 100%;
+        overflow: hidden;
+        touch-action: none;
+        overscroll-behavior: none;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
+      }
       body {
         background: linear-gradient(#a8e6ff, #e8fbff);
         display: flex; align-items: center; justify-content: center;
-        font-family: system-ui, sans-serif; overflow: hidden;
+        font-family: system-ui, sans-serif;
       }
       canvas { box-shadow: 0 12px 40px rgba(30, 120, 160, 0.35); }
     </style>

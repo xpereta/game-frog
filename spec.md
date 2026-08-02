@@ -56,7 +56,8 @@ compete.
 
 ## Controls & input
 
-- `Space`, canvas click, and touch all trigger the tongue.
+- `Space`, or tapping anywhere on the screen (the whole page is the button,
+  including the letterbox around the canvas), triggers the tongue.
 - Prevent space from scrolling the page.
 
 ## Technical
