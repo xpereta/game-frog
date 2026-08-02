@@ -15,3 +15,10 @@ export const FATNESS_HEIGHT_MAX = 1.3; // max vertical scale
 export const EAT_POP_DURATION = 0.35; // seconds of squash-stretch per swallow
 export const EAT_POP_WIDTH = 0.22; // extra width during the eat-pop peak
 export const EAT_POP_HEIGHT = 0.12; // height lost during the eat-pop peak
+
+// Frog emoji sprite (perf): the 🐸 glyph is rasterized once into an offscreen
+// canvas at this resolution, then composited with drawImage each frame. Per-
+// frame fillText of color emoji under non-uniform/rotating transforms makes
+// Chrome re-rasterize the glyph every frame (100% CPU + cache growth).
+export const FROG_SPRITE = 1024; // sprite canvas box, px
+export const FROG_SPRITE_FONT = 704; // glyph font size within the sprite (8× the 88px base)

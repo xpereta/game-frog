@@ -5,6 +5,8 @@ import {
   FATNESS_CAP,
   FATNESS_HEIGHT_MAX,
   FATNESS_WIDTH_MAX,
+  FROG_SPRITE,
+  FROG_SPRITE_FONT,
   FROG_X,
   FROG_Y,
 } from "./consts";
@@ -29,6 +31,7 @@ const MULTI_SPIN_END = 0.6;
 const BLINK_DURATION = 0.12;
 const HOP_DURATION = 0.45;
 const LICK_DURATION = 0.3;
+const FROG_FONT = 88;
 
 const rnd = (min: number, max: number) => min + Math.random() * (max - min);
 
@@ -135,6 +138,79 @@ function startLick(elapsed: number) {
   nextLickAt = elapsed + rnd(4, 7);
 }
 
+const emojiSprites = new Map<string, HTMLCanvasElement | null>();
+
+/**
+ * Rasterize a small emoji glyph once into a cached offscreen canvas (4× box,
+ * glyph drawn at 2× font), so frames composite it with drawImage instead of
+ * re-rasterizing color-emoji text every frame. Returns null if the font didn't
+ * produce a glyph (caller falls back to live fillText).
+ */
+function emojiSprite(glyph: string, fontPx: number): HTMLCanvasElement | null {
+  const key = `${fontPx}:${glyph}`;
+  const cached = emojiSprites.get(key);
+  if (cached !== undefined) return cached;
+  const c = document.createElement("canvas");
+  const box = fontPx * 4;
+  c.width = box;
+  c.height = box;
+  const s = c.getContext("2d")!;
+  s.textAlign = "center";
+  s.textBaseline = "middle";
+  s.font = `${fontPx * 2}px serif`;
+  s.fillText(glyph, box / 2, box / 2);
+  const sprite = s.measureText(glyph).width > 0 ? c : null;
+  emojiSprites.set(key, sprite);
+  return sprite;
+}
+
+/** Draw a cached emoji sprite centered at (x, y) at its original font size. */
+function drawGlyphSprite(
+  ctx: CanvasRenderingContext2D,
+  glyph: string,
+  fontPx: number,
+  x: number,
+  y: number
+) {
+  const sprite = emojiSprite(glyph, fontPx);
+  if (!sprite) {
+    ctx.font = `${fontPx}px serif`;
+    ctx.fillText(glyph, x, y);
+    return;
+  }
+  const size = fontPx * 2;
+  ctx.drawImage(sprite, x - size / 2, y - size / 2, size, size);
+}
+
+let frogSpriteCanvas: HTMLCanvasElement | null | undefined;
+
+/** High-res cached rasterization of the 🐸 glyph (see FROG_SPRITE consts). */
+function getFrogSprite(): HTMLCanvasElement | null {
+  if (frogSpriteCanvas !== undefined) return frogSpriteCanvas;
+  const c = document.createElement("canvas");
+  c.width = FROG_SPRITE;
+  c.height = FROG_SPRITE;
+  const s = c.getContext("2d")!;
+  s.textAlign = "center";
+  s.textBaseline = "middle";
+  s.font = `${FROG_SPRITE_FONT}px serif`;
+  s.fillText("🐸", FROG_SPRITE / 2, FROG_SPRITE / 2);
+  frogSpriteCanvas = s.measureText("🐸").width > 0 ? c : null;
+  return frogSpriteCanvas;
+}
+
+/** Draw the frog glyph centered on the origin, sized like the old 88px font. */
+function drawFrogSprite(ctx: CanvasRenderingContext2D) {
+  const sprite = getFrogSprite();
+  if (!sprite) {
+    ctx.font = `${FROG_FONT}px serif`;
+    ctx.fillText("🐸", 0, 0);
+    return;
+  }
+  const size = FROG_SPRITE * (FROG_FONT / FROG_SPRITE_FONT);
+  ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
+}
+
 export function drawFrog(ctx: CanvasRenderingContext2D, state: FrogDrawState) {
   const { frogState, stateTimer, elapsed, catchCount = 1, variant = 0, fatness = 0, eatPopAt = -1 } = state;
   const multicatch = catchCount > 1;
@@ -171,10 +247,8 @@ export function drawFrog(ctx: CanvasRenderingContext2D, state: FrogDrawState) {
     ctx.translate(FROG_X, y);
     ctx.rotate(0.08);
     ctx.scale(fatScaleX, fatScaleY);
-    ctx.font = "88px serif";
-    ctx.fillText("🐸", 0, 0);
-    ctx.font = "26px serif";
-    ctx.fillText("💧", 34, -18);
+    drawFrogSprite(ctx);
+    drawGlyphSprite(ctx, "💧", 26, 34, -18);
     ctx.restore();
     return;
   }
@@ -210,21 +284,18 @@ export function drawFrog(ctx: CanvasRenderingContext2D, state: FrogDrawState) {
   ctx.translate(FROG_X, y + (frogState === "happy" ? happyJumpOffset(happyProgress, multicatch) : 0));
   if (frogState === "happy") ctx.rotate(happyRotation(happyProgress, multicatch, variant));
   ctx.scale(scaleX, scaleY);
-  ctx.font = "88px serif";
-  ctx.fillText("🐸", 0, 0);
+  drawFrogSprite(ctx);
 
   if (frogState === "happy") {
     const spread = 46 + happyProgress * 40;
-    ctx.font = "24px serif";
-    ctx.fillText("✨", spread, -30);
-    ctx.fillText("😄", 22, -60);
+    drawGlyphSprite(ctx, "✨", 24, spread, -30);
+    drawGlyphSprite(ctx, "😄", 24, 22, -60);
   }
 
   if (lickStartedAt >= 0) {
     const since = elapsed - lickStartedAt;
     if (since < LICK_DURATION) {
-      ctx.font = "28px serif";
-      ctx.fillText("😝", 44, -20);
+      drawGlyphSprite(ctx, "😝", 28, 44, -20);
     } else lickStartedAt = -1;
   }
 
