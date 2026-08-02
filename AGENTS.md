@@ -69,7 +69,9 @@ Always run `npm run typecheck && npm run test && npm run build` after changes.
   `FATNESS_EASE`), so a miss deflates the frog smoothly instead of snapping.
   The 🐸 glyph scales to `frogWidthScale`/`frogHeightScale`
   (×`FATNESS_WIDTH_MAX` wide at max). A swallow fires `eatPopAt` → `eatPopScale`
-  squash-stretch. Purely visual.
+  squash-stretch. Surrounding emojis (💧✨😄😝) are drawn under a uniform scale
+  so they keep their aspect ratio while the frog alone stretches. Purely
+  visual.
 - **Debug keys** (`src/main.ts`): `Z` → `debugCatch(1)`, `X` → `debugCatch(2)`
   to test single and multi-catch without waiting for bugs.
 
