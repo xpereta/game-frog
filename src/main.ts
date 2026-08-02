@@ -11,6 +11,7 @@ function fit() {
   const scale = Math.min(window.innerWidth / W, window.innerHeight / H);
   canvas.style.width = `${W * scale}px`;
   canvas.style.height = `${H * scale}px`;
+  canvas.style.borderRadius = `${16 * Math.min(scale, 1)}px`;
   canvas.width = W * dpr;
   canvas.height = H * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
