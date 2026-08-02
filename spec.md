@@ -8,26 +8,38 @@ compete.
 
 - Press **space** (or click/tap the canvas) to make the frog's tongue lunge
   straight up from its mouth at a **constant speed**.
-- The tongue extends to its full reach, then retracts. A bug caught while the
-  tongue is extending is eaten.
-- Bugs (fly, ladybug, bee) spawn from the left/right edges at random heights,
-  fly across at species-specific speeds/directions with a slight wobble, and
-  despawn off the far edge. Spawning never stops.
-- No score. No game over. Misses have no consequence beyond a brief sad face
-  and a streak reset.
+- The tongue shoots up to its full reach, then retracts. On the way up it
+  grabs every bug its tip touches — one or several at a time — and brings
+  them down to the frog's mouth, where each fades in and is swallowed.
+- Bugs come in three species (fly, ladybug, bee). They spawn from the
+  left/right edges at random heights, fly across at speeds and in directions
+  that vary by species, wobbling slightly, and despawn off the far edge.
+  Spawning never stops.
+- Misses have no consequence beyond a brief sad face and resetting your streak
+  of catches in a row.
+- **Out of scope:** no score, no game over, no win/lose text, no lives.
 
-## Feel targets
+## Game feel
 
-- Tongue speed is constant and identical in both directions (snappy, readable).
-- Catch window is generous: the tongue tip can touch a bug anywhere along its
-  reach column.
+- Tongue extends at a constant speed and snaps back quickly when empty; while
+  carrying bugs it returns a bit slower so the catch is visible.
+- Catch window is generous: the tongue tip can touch a bug anywhere along the
+  vertical band it travels through.
 - Every catch rewards the player:
-  - a **species-specific procedural jingle** (Web Audio, randomized so it
-    sounds different each time),
-  - the frog looks **happy** for ~2 seconds (sparkles + bounce), and
-  - a friendly streak rank ticks up in the HUD (🐣 → 🐤 → 🐸 → 🐉).
+  - a short **grab sound** when the tongue touches a bug, plus a
+    **per-species jingle** with a low thump when it's swallowed (Web Audio,
+    randomized so it sounds different each time),
+  - the frog looks **happy** for ~2 seconds (jump + splash + a wink and smile
+    from the sun),
+  - and a streak of catches in a row builds a friendly emoji rank in a
+    top-of-screen HUD: 🐣 → 🐤 → 🐸 → 🐉.
+- Multi-catch (2+ bugs in one throw): the happy reaction is upgraded — a higher
+  jump with a full spin.
+- High catches add more: grabbing a bug above half reach plays a bright
+  sparkle ping; grabbing one near the top fires gold star particles and a
+  sun flare.
 - A miss makes the frog look **sad** for ~1 second, then it returns to idle.
-- The catch triggers a large particle burst with a widening ring.
+- The swallow triggers a particle burst with a widening ring at the frog.
 
 ## Visuals & audio
 
@@ -37,9 +49,9 @@ compete.
 - Frog drawn with the 🐸 emoji; bugs with species emoji (🪰 fly, 🐞 ladybug,
   🐝 bee) that flip to face their direction of travel. Tongue is a pink
   tapered shape whose tip wobbles while it moves.
-- All audio generated in code (Web Audio API): per-species catch jingles, a
-  soft miss boop. Audio unlocks on the first user gesture (browser autoplay
-  requirement).
+- All audio generated in code (Web Audio API): per-species grab sounds and
+  catch jingles, a thumping swallow boom, a soft miss boop. Audio unlocks on
+  the first user gesture (browser autoplay requirement).
 
 ## Controls & input
 
@@ -56,11 +68,11 @@ compete.
 
 1. Pressing space fires the tongue straight up at constant speed; it retracts
    after reaching full reach, its tip wobbling while extended.
-2. When the extending tongue tip overlaps a bug, the bug is eaten (removed), a
-   large particle burst + ring plays, a species-specific jingle plays, and the
-   frog is happy ~2s.
+2. When the extending tongue tip overlaps a bug, the bug is grabbed and carried
+   down; as it nears the frog it fades, then a particle burst + ring plays at
+   the frog, a per-species jingle plays, and the frog is happy ~2s.
 3. Tongue misses cause no bug removal, a sad frog ~1s, and no jingle.
-4. Bugs of three species (fly, ladybug, bee) continuously spawn from either
+4. Bugs of all three species (fly, ladybug, bee) continuously spawn from either
    edge at varied heights/speeds and exit the opposite edge, facing the way
    they fly.
 5. The frog returns to idle after happy/sad states; while idle it blinks,

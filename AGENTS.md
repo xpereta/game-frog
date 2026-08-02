@@ -1,0 +1,96 @@
+# AGENTS.md — Tongue Catch
+
+One-button frog tongue-catching game. Vite + TypeScript + Vitest, single
+`<canvas>`, no game engine, no framework. Goal: delight, not competition —
+no numeric score, no game over, no win/lose text.
+
+## Commands
+
+```bash
+npm run dev        # local dev server (Vite)
+npm run typecheck  # tsc --noEmit
+npm run test       # vitest run (40 tests)
+npm run build      # tsc && vite build
+npm run preview    # preview the production build
+```
+
+Always run `npm run typecheck && npm run test && npm run build` after changes.
+
+## Deploy
+
+- GitHub repo: **xpereta/game-frog** (public — required for Pages on this plan).
+- Live URL: **https://xpereta.github.io/game-frog/**
+- Auto-deploys on push to `main` via `.github/workflows/deploy-pages.yml`
+  (GitHub Actions → Pages). `vite.config.ts` uses `base: "./"` for subpath hosting.
+
+## Architecture
+
+| File | Role |
+| --- | --- |
+| `src/consts.ts` | `W=800`, `H=600`, `TONGUE_SPEED=600`, `TONGUE_REACH=430`, `FROG_X`, `FROG_Y`, `FROG_R`, `WATER_Y=500` |
+| `src/main.ts` | Canvas setup, DPR scaling, input (`Space`/`pointerdown` fire), debug keys, audio unlock listeners |
+| `src/game.ts` | `Game` class: loop, states (`idle`/`happy`/`sad`), particles, grabbed bugs, sun, pond, HUD |
+| `src/tongue.ts` | Tongue state machine + geometry: `createTongue`, `fireTongue`, `updateTongue(t, dt, carry)`, `mouthY()`, `altitudeFor(y)`, `tongueTipY(t)`, `tongueHitsFly` |
+| `src/bugs.ts` | Bug species config + behavior: `spawnBug`, `updateBug`, `bugY`, `isOffScreen`, `bugRenderTransform`, `grabbedY` override |
+| `src/frog.ts` | Frog/tongue drawing + animation curves: `drawFrog`, `drawTongue` (sneak wave), `happyJumpOffset`, `happyRotation`, `blinkScale`, `hopPulseScale` |
+| `src/audio.ts` | Procedural Web Audio: `Sound` class — `playLunge`, `playGrab(species)`, `playCatchFor(species)`, `playReach(alt)`, `playMiss`, `unlock`, private `pluck`/`thump` |
+| `src/hud.ts` | Streak rank emojis: `rankForStreak`, `bestStreakAfter`, `drawHud` |
+
+## Current gameplay mechanics
+
+- **One input** (space / click / tap) fires the tongue straight up from the
+  frog's mouth at `TONGUE_SPEED`.
+- **Grab phase (extend):** while extending, the tongue latches onto any bug its
+  tip touches (`tongueHitsFly`). Grabbed bugs leave the swarm and ride the
+  tongue tip (pinned to `tongueTipY`, spread ±16px apart). Grab fires
+  `playGrab(species)` + reach rewards (see below). Tongue still extends to full
+  reach, grabbing every bug in its path (multi-catch).
+- **Swallow phase (retract):** retract runs at `TONGUE_SPEED * 1` while
+  carrying, `* 2` when empty. Grabbed bugs **fade out over the last 70px** as
+  they approach the mouth (`dist / 70` alpha in render). When the tip reaches
+  `mouthY() - 14` the catch lands: burst at the frog, species jingle, happy
+  jump, splash, streak increment.
+- **Miss:** tongue completes a full cycle with no bugs → sad face ~1.1s, streak
+  reset. Sad is gated on `grabbed.length === 0` (carrying bugs never triggers it).
+- **Multi-catch (2+ in one throw):** upgraded celebration — higher jump
+  (~95px), hover at peak during spin, never dips below rest, full 360° rotation
+  done by 60% of the happy window. Tracks `caughtThisLunge` (per-throw counter,
+  reset in `fire`) and `lastCatchCount`.
+- **Reach rewards:** `alt = altitudeFor(y)`; `alt >= 0.5` → `playReach(alt)`
+  sparkle ping layered over the jingle; `alt >= 0.85` → gold 4-point star
+  particles + sun flare.
+- **Sun reacts** while the frog is happy: winks (first 25%), big smile, brighter
+  glow, faster-spinning rays that also grow (`1.55 - 0.35*happyP`).
+- **Water splashes** at the lily pad on frog takeoff (small) and landing
+  (bigger), detected via `happyJumpOffset` + `frogAirborneMs`.
+- **HUD:** streak rank 🐣 → 🐤 → 🐸 → 🐉 with dots, best under 🏆. No numbers.
+- **Debug keys** (`src/main.ts`): `Z` → `debugCatch(1)`, `X` → `debugCatch(2)`
+  to test single and multi-catch without waiting for bugs.
+
+## Conventions
+
+- **No comments in code** unless the user asks. Mirror existing style.
+- Emoji + canvas shapes only — no image assets.
+- No numeric score, no game over. Delight over competition.
+- Audio must be procedural (Web Audio oscillators), unlocked on a user gesture.
+- **Docs stay in sync:** any change that alters gameplay, architecture, input,
+  audio, or commands must update the matching doc in the same change — `spec.md`
+  (rules/feel/visuals) or this file (architecture table, mechanics). Behavior-
+  neutral bug fixes need no doc update.
+
+## Audio gotchas (iOS Safari) — DO NOT regress
+
+- Sound works on desktop Safari/Chrome; on iOS it needed: silent-buffer prime +
+  non-awaiting `playLunge` + first-gesture unlock. Currently working on iOS.
+- Known flaky areas, do not reintroduce:
+  - `pointerdown` is an unreliable unlock gesture on iOS (use `touchend`/
+    `click`/`mousedown`/`keyup` sets if needed).
+  - iOS **ringer/mute switch silences WebAudio** — fix is a silent looping
+    `<audio>` element and/or `navigator.audioSession.type = "playback"`
+    (Safari iOS 17+, not yet implemented).
+  - iOS 18+ `AudioContext.resume()` can leave the context `"suspended"`/non-
+    standard `"interrupted"`; robust fix is recreating the context on the next
+    gesture (not yet implemented).
+- **User rejected altitude-scaled pitch/loudness of the catch jingle twice.**
+  Keep the jingle fixed; reach is a separate sparkle layer (`playReach`), never
+  change the jingle's pitch by altitude.
