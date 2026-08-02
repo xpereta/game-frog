@@ -4,7 +4,7 @@ import { BUG_SPECIES, bugRenderTransform, bugY, isOffScreen, spawnBug, updateBug
 import type { Bug } from "./bugs";
 import { drawFrog, drawTongue, happyJumpOffset } from "./frog";
 import { bestStreakAfter, drawHud } from "./hud";
-import { altitudeFor, createTongue, fireTongue, mouthY, tongueHitsFly, tongueTipY, updateTongue } from "./tongue";
+import { altitudeFor, createTongue, fireTongue, mouthY, tongueHitsBug, tongueTipY, updateTongue } from "./tongue";
 
 type FrogState = "idle" | "happy" | "sad";
 
@@ -87,7 +87,7 @@ export class Game {
 
     if (this.tongue.state === "extend") {
       for (const b of this.bugs) {
-        if (tongueHitsFly(this.tongue, b.x, bugY(b))) {
+        if (tongueHitsBug(this.tongue, b.x, bugY(b))) {
           this.audio.playGrab(b.species);
           const alt = altitudeFor(bugY(b));
           if (alt >= 0.5) this.audio.playReach(alt);

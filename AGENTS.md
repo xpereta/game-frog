@@ -30,7 +30,7 @@ Always run `npm run typecheck && npm run test && npm run build` after changes.
 | `src/consts.ts` | `W=800`, `H=600`, `TONGUE_SPEED=600`, `TONGUE_REACH=430`, `FROG_X`, `FROG_Y`, `FROG_R`, `WATER_Y=500` |
 | `src/main.ts` | Canvas setup, DPR scaling, input (`Space`/`pointerdown` fire), debug keys, audio unlock listeners |
 | `src/game.ts` | `Game` class: loop, states (`idle`/`happy`/`sad`), particles, grabbed bugs, sun, pond, HUD |
-| `src/tongue.ts` | Tongue state machine + geometry: `createTongue`, `fireTongue`, `updateTongue(t, dt, carry)`, `mouthY()`, `altitudeFor(y)`, `tongueTipY(t)`, `tongueHitsFly` |
+| `src/tongue.ts` | Tongue state machine + geometry: `createTongue`, `fireTongue`, `updateTongue(t, dt, carry)`, `mouthY()`, `altitudeFor(y)`, `tongueTipY(t)`, `tongueHitsBug` |
 | `src/bugs.ts` | Bug species config + behavior: `spawnBug`, `updateBug`, `bugY`, `isOffScreen`, `bugRenderTransform`, `grabbedY` override |
 | `src/frog.ts` | Frog/tongue drawing + animation curves: `drawFrog`, `drawTongue` (sneak wave), `happyJumpOffset`, `happyRotation`, `blinkScale`, `hopPulseScale` |
 | `src/audio.ts` | Procedural Web Audio: `Sound` class — `playLunge`, `playGrab(species)`, `playCatchFor(species)`, `playReach(alt)`, `playMiss`, `unlock`, private `pluck`/`thump` |
@@ -41,7 +41,7 @@ Always run `npm run typecheck && npm run test && npm run build` after changes.
 - **One input** (space / click / tap) fires the tongue straight up from the
   frog's mouth at `TONGUE_SPEED`.
 - **Grab phase (extend):** while extending, the tongue latches onto any bug its
-  tip touches (`tongueHitsFly`). Grabbed bugs leave the swarm and ride the
+  tip touches (`tongueHitsBug`). Grabbed bugs leave the swarm and ride the
   tongue tip (pinned to `tongueTipY`, spread ±16px apart). Grab fires
   `playGrab(species)` + reach rewards (see below). Tongue still extends to full
   reach, grabbing every bug in its path (multi-catch).
@@ -69,7 +69,8 @@ Always run `npm run typecheck && npm run test && npm run build` after changes.
 
 ## Conventions
 
-- **No comments in code** unless the user asks. Mirror existing style.
+- **No gratuitous inline comments.** JSDoc on exported functions is fine
+  (explains curves/behavior); mirror existing style.
 - Emoji + canvas shapes only — no image assets.
 - No numeric score, no game over. Delight over competition.
 - Audio must be procedural (Web Audio oscillators), unlocked on a user gesture.

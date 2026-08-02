@@ -10,7 +10,8 @@ compete.
   straight up from its mouth at a **constant speed**.
 - The tongue shoots up to its full reach, then retracts. On the way up it
   grabs every bug its tip touches — one or several at a time — and brings
-  them down to the frog's mouth, where each fades in and is swallowed.
+  them down to the frog's mouth, where each fades out as it nears the mouth
+  and is swallowed.
 - Bugs come in three species (fly, ladybug, bee). They spawn from the
   left/right edges at random heights, fly across at speeds and in directions
   that vary by species, wobbling slightly, and despawn off the far edge.

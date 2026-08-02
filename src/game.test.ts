@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { H, TONGUE_REACH, TONGUE_SPEED, W } from "./consts";
-import { isOffScreen, spawnFly, updateFly, flyY } from "./fly";
+import { bugY, isOffScreen, spawnFly, updateBug } from "./bugs";
 import {
   altitudeFor,
   createTongue,
   fireTongue,
   mouthY,
-  tongueHitsFly,
+  tongueHitsBug,
   tongueTipY,
   updateTongue,
 } from "./tongue";
@@ -26,7 +26,7 @@ describe("spawnFly", () => {
   it("flies across and is eventually off screen", () => {
     const f = spawnFly();
     const dir = Math.sign(f.vx);
-    for (let i = 0; i < 1000; i++) updateFly(f, 0.016);
+    for (let i = 0; i < 1000; i++) updateBug(f, 0.016);
     expect(isOffScreen(f)).toBe(true);
     expect(Math.sign(f.vx)).toBe(dir);
   });
@@ -34,8 +34,8 @@ describe("spawnFly", () => {
   it("keeps the visible y within a bounded wobble", () => {
     const f = spawnFly();
     for (let i = 0; i < 500; i++) {
-      updateFly(f, 0.016);
-      const y = flyY(f);
+      updateBug(f, 0.016);
+      const y = bugY(f);
       expect(y).toBeGreaterThanOrEqual(f.baseY - 23);
       expect(y).toBeLessThanOrEqual(f.baseY + 23);
     }
@@ -76,12 +76,12 @@ describe("tongue", () => {
     expect(misses).toBe(1);
   });
 
-  it("catches a fly directly above the mouth and misses far-off ones", () => {
+  it("catches a bug directly above the mouth and misses far-off ones", () => {
     const t = createTongue();
     fireTongue(t);
     updateTongue(t, TONGUE_REACH / TONGUE_SPEED + 0.001);
-    expect(tongueHitsFly(t, W / 2, tongueTipY(t))).toBe(true);
-    expect(tongueHitsFly(t, W / 2 - 80, tongueTipY(t))).toBe(false);
+    expect(tongueHitsBug(t, W / 2, tongueTipY(t))).toBe(true);
+    expect(tongueHitsBug(t, W / 2 - 80, tongueTipY(t))).toBe(false);
   });
 
   it("computes altitude 0 at the mouth, ~1 at max reach, clamped out of range", () => {

@@ -53,10 +53,6 @@ export class Sound {
     }
   }
 
-  playCatch() {
-    this.playCatchFor("fly");
-  }
-
   playLunge() {
     const ctx = this.ensureCtx();
     if (!ctx) return;

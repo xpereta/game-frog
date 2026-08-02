@@ -52,9 +52,9 @@ export function isTongueBusy(t: Tongue): boolean {
   return t.state !== "idle";
 }
 
-export function tongueHitsFly(t: Tongue, flyCx: number, flyCy: number): boolean {
-  const dx = flyCx - FROG_X;
-  const dy = flyCy - tongueTipY(t);
+export function tongueHitsBug(t: Tongue, bugCx: number, bugCy: number): boolean {
+  const dx = bugCx - FROG_X;
+  const dy = bugCy - tongueTipY(t);
   const r = TONGUE_TIP_R + 16;
   return dx * dx + dy * dy < r * r;
 }

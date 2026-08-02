@@ -25,7 +25,6 @@ const EDGE_LEFT = -40;
 const EDGE_RIGHT = W + 40;
 const MIN_Y = 70;
 const MAX_Y = H - 170;
-const BUG_R = 22;
 const WOB_BASE = 6;
 const WOB_RANGE = 16;
 
@@ -76,14 +75,6 @@ export function bugY(b: Bug): number {
 
 export function isOffScreen(b: Bug): boolean {
   return b.x < EDGE_LEFT - 20 || b.x > EDGE_RIGHT + 20;
-}
-
-export function bugBounds(b: Bug) {
-  return {
-    cx: b.x,
-    cy: bugY(b),
-    r: BUG_R,
-  };
 }
 
 export function facingSign(b: Bug): number {
