@@ -7,6 +7,7 @@ import {
 } from "./consts";
 import {
   blinkScale,
+  easeFatness,
   eatPopScale,
   frogFatness,
   frogHeightScale,
@@ -138,6 +139,27 @@ describe("frogHeightScale", () => {
   it("is 1 when slim and the max when fully fat", () => {
     expect(frogHeightScale(0)).toBe(1);
     expect(frogHeightScale(1)).toBe(FATNESS_HEIGHT_MAX);
+  });
+});
+
+describe("easeFatness", () => {
+  it("moves partway toward the target in a step", () => {
+    const next = easeFatness(0, 1, 0.1);
+    expect(next).toBeGreaterThan(0);
+    expect(next).toBeLessThan(1);
+    expect(next).toBeCloseTo(1 - Math.exp(-4 * 0.1), 5);
+  });
+
+  it("converges on the target over time (deflate on a miss)", () => {
+    let f = 1;
+    for (let i = 0; i < 300; i++) f = easeFatness(f, 0, 0.02);
+    expect(f).toBeCloseTo(0, 4);
+  });
+
+  it("is a no-op for dt <= 0 or when already at the target", () => {
+    expect(easeFatness(0.5, 0.5, 0.1)).toBeCloseTo(0.5, 5);
+    expect(easeFatness(0.5, 0.5, 0)).toBeCloseTo(0.5, 5);
+    expect(easeFatness(0.5, 1, -0.1)).toBeCloseTo(0.5, 5);
   });
 });
 

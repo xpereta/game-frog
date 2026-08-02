@@ -3,6 +3,7 @@ import {
   EAT_POP_HEIGHT,
   EAT_POP_WIDTH,
   FATNESS_CAP,
+  FATNESS_EASE,
   FATNESS_HEIGHT_MAX,
   FATNESS_WIDTH_MAX,
   FROG_SPRITE,
@@ -75,6 +76,16 @@ export function frogWidthScale(fatness: number): number {
 /** Vertical scale of the frog glyph for a given fatness (1 → FATNESS_HEIGHT_MAX). */
 export function frogHeightScale(fatness: number): number {
   return 1 + (FATNESS_HEIGHT_MAX - 1) * Math.min(1, Math.max(0, fatness));
+}
+
+/**
+ * Ease the displayed fatness toward its target so the frog inflates/deflates
+ * smoothly instead of snapping (deflate on a miss especially). Exponential
+ * approach at `rate` per second; returns the new displayed fatness.
+ */
+export function easeFatness(current: number, target: number, dt: number, rate = FATNESS_EASE): number {
+  if (dt <= 0) return current;
+  return current + (target - current) * (1 - Math.exp(-rate * dt));
 }
 
 /**

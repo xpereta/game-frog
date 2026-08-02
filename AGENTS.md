@@ -9,7 +9,7 @@ no numeric score, no game over, no win/lose text.
 ```bash
 npm run dev        # local dev server (Vite)
 npm run typecheck  # tsc --noEmit
-npm run test       # vitest run (47 tests)
+npm run test       # vitest run (50 tests)
 npm run build      # tsc && vite build
 npm run preview    # preview the production build
 ```
@@ -27,12 +27,12 @@ Always run `npm run typecheck && npm run test && npm run build` after changes.
 
 | File | Role |
 | --- | --- |
-| `src/consts.ts` | `W=800`, `H=600`, `TONGUE_SPEED=600`, `TONGUE_REACH=430`, `FROG_X`, `FROG_Y`, `FROG_R`, `WATER_Y=500`; fatness tunables `FATNESS_CAP=15`, `FATNESS_WIDTH_MAX=2.2`, `FATNESS_HEIGHT_MAX=1.3`, `EAT_POP_DURATION=0.35`, `EAT_POP_WIDTH=0.22`, `EAT_POP_HEIGHT=0.12`; frog sprite res `FROG_SPRITE=1024`, `FROG_SPRITE_FONT=704` |
+| `src/consts.ts` | `W=800`, `H=600`, `TONGUE_SPEED=600`, `TONGUE_REACH=430`, `FROG_X`, `FROG_Y`, `FROG_R`, `WATER_Y=500`; fatness tunables `FATNESS_CAP=15`, `FATNESS_WIDTH_MAX=2.2`, `FATNESS_HEIGHT_MAX=1.3`, `FATNESS_EASE=4`, `EAT_POP_DURATION=0.35`, `EAT_POP_WIDTH=0.22`, `EAT_POP_HEIGHT=0.12`; frog sprite res `FROG_SPRITE=1024`, `FROG_SPRITE_FONT=704` |
 | `src/main.ts` | Canvas setup, DPR scaling, input (`Space`/`window` pointerdown fire, debug keys), audio unlock listeners |
 | `src/game.ts` | `Game` class: loop, states (`idle`/`happy`/`sad`), particles, grabbed bugs, sun, pond, HUD |
 | `src/tongue.ts` | Tongue state machine + geometry: `createTongue`, `fireTongue`, `updateTongue(t, dt, carry)`, `mouthY()`, `altitudeFor(y)`, `tongueTipY(t)`, `tongueHitsBug` |
 | `src/bugs.ts` | Bug species config + behavior: `spawnBug`, `updateBug`, `bugY`, `isOffScreen`, `bugRenderTransform`, `grabbedY` override |
-| `src/frog.ts` | Frog/tongue drawing + animation curves: `drawFrog`, `drawTongue` (sneak wave), `happyJumpOffset`, `happyRotation`, `blinkScale`, `hopPulseScale`, `frogFatness`, `frogWidthScale`, `frogHeightScale`, `eatPopScale`. Emoji glyphs are pre-rendered to offscreen sprites (`getFrogSprite`/`drawGlyphSprite`) and composited with `drawImage` — per-frame `fillText` of color emoji under non-uniform/rotating transforms re-rasterizes every frame and pegs CPU on Chrome/macOS (do not regress) |
+| `src/frog.ts` | Frog/tongue drawing + animation curves: `drawFrog`, `drawTongue` (sneak wave), `happyJumpOffset`, `happyRotation`, `blinkScale`, `hopPulseScale`, `frogFatness`, `frogWidthScale`, `frogHeightScale`, `easeFatness` (smooth inflate/deflate), `eatPopScale`. Emoji glyphs are pre-rendered to offscreen sprites (`getFrogSprite`/`drawGlyphSprite`) and composited with `drawImage` — per-frame `fillText` of color emoji under non-uniform/rotating transforms re-rasterizes every frame and pegs CPU on Chrome/macOS (do not regress) |
 | `src/audio.ts` | Procedural Web Audio: `Sound` class — `playLunge`, `playGrab(species)`, `playCatchFor(species)`, `playReach(alt)`, `playMiss`, `unlock`, private `ensureRunning`/`recreate`/`enableIOSSession`/`prime`, `pluck`/`thump` |
 | `src/hud.ts` | Streak rank emojis: `rankForStreak`, `bestStreakAfter`, `drawHud` |
 
@@ -65,9 +65,11 @@ Always run `npm run typecheck && npm run test && npm run build` after changes.
   (bigger), detected via `happyJumpOffset` + `frogAirborneMs`.
 - **HUD:** streak rank 🐣 → 🐤 → 🐸 → 🐉 with dots, best under 🏆. No numbers.
 - **Fat frog:** `streak` feeds `frogFatness(streak)` (0..1, full at
-  `FATNESS_CAP`); the 🐸 glyph scales to `frogWidthScale`/`frogHeightScale`
+  `FATNESS_CAP`); the displayed fatness eases toward it (`easeFatness`,
+  `FATNESS_EASE`), so a miss deflates the frog smoothly instead of snapping.
+  The 🐸 glyph scales to `frogWidthScale`/`frogHeightScale`
   (×`FATNESS_WIDTH_MAX` wide at max). A swallow fires `eatPopAt` → `eatPopScale`
-  squash-stretch; a miss resets streak → frog deflates. Purely visual.
+  squash-stretch. Purely visual.
 - **Debug keys** (`src/main.ts`): `Z` → `debugCatch(1)`, `X` → `debugCatch(2)`
   to test single and multi-catch without waiting for bugs.
 

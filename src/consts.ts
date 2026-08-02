@@ -12,6 +12,7 @@ export const WATER_Y = 500;
 export const FATNESS_CAP = 15; // streak at which the frog is fully fat
 export const FATNESS_WIDTH_MAX = 2.2; // max horizontal scale
 export const FATNESS_HEIGHT_MAX = 1.3; // max vertical scale
+export const FATNESS_EASE = 4; // how fast the frog inflates/deflates toward its streak fatness (1/s)
 export const EAT_POP_DURATION = 0.35; // seconds of squash-stretch per swallow
 export const EAT_POP_WIDTH = 0.22; // extra width during the eat-pop peak
 export const EAT_POP_HEIGHT = 0.12; // height lost during the eat-pop peak

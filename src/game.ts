@@ -2,7 +2,7 @@ import { Sound } from "./audio";
 import { FROG_X, H, W, WATER_Y } from "./consts";
 import { BUG_SPECIES, bugRenderTransform, bugY, isOffScreen, spawnBug, updateBug } from "./bugs";
 import type { Bug } from "./bugs";
-import { drawFrog, drawTongue, frogFatness, happyJumpOffset } from "./frog";
+import { drawFrog, drawTongue, easeFatness, frogFatness, happyJumpOffset } from "./frog";
 import { bestStreakAfter, drawHud } from "./hud";
 import { altitudeFor, createTongue, fireTongue, mouthY, tongueHitsBug, tongueTipY, updateTongue } from "./tongue";
 
@@ -47,6 +47,7 @@ export class Game {
   private streak = 0;
   private bestStreak = 0;
   private eatPopAt = -1;
+  private fatness = 0;
 
   fire() {
     this.audio.unlock();
@@ -84,6 +85,7 @@ export class Game {
     this.elapsed += dt;
     this.cloudOffset += dt * 8;
     if (this.sunFlareTimer > 0) this.sunFlareTimer -= dt;
+    this.fatness = easeFatness(this.fatness, frogFatness(this.streak), dt);
 
     const missed = updateTongue(this.tongue, dt, this.grabbed.length > 0);
 
@@ -467,7 +469,7 @@ export class Game {
       elapsed: this.elapsed,
       catchCount: this.lastCatchCount,
       variant: this.happyVariant,
-      fatness: frogFatness(this.streak),
+      fatness: this.fatness,
       eatPopAt: this.eatPopAt,
     });
   }
