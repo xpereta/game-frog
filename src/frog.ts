@@ -1,4 +1,13 @@
-import { FROG_X, FROG_Y } from "./consts";
+import {
+  EAT_POP_DURATION,
+  EAT_POP_HEIGHT,
+  EAT_POP_WIDTH,
+  FATNESS_CAP,
+  FATNESS_HEIGHT_MAX,
+  FATNESS_WIDTH_MAX,
+  FROG_X,
+  FROG_Y,
+} from "./consts";
 import { mouthY, tongueTipY, type Tongue } from "./tongue";
 
 export type FrogState = "idle" | "happy" | "sad";
@@ -9,6 +18,10 @@ export interface FrogDrawState {
   elapsed: number;
   catchCount?: number;
   variant?: number;
+  /** 0 → 1, how fat the frog is (drives the width/height scales). */
+  fatness?: number;
+  /** `elapsed` timestamp of the last swallow; used to time the eat-pop squash. */
+  eatPopAt?: number;
 }
 
 const HAPPY_MS = 2000;
@@ -44,6 +57,33 @@ export function hopPulseScale(elapsedSinceHop: number, duration = HOP_DURATION):
   if (elapsedSinceHop < 0 || elapsedSinceHop > duration) return 1;
   const t = elapsedSinceHop / duration;
   return 1 + 0.04 * Math.sin(t * Math.PI);
+}
+
+/** Fatness (0 → 1) from the current streak; reaches 1 at `FATNESS_CAP`. */
+export function frogFatness(streak: number): number {
+  return Math.min(1, Math.max(0, streak / FATNESS_CAP));
+}
+
+/** Horizontal scale of the frog glyph for a given fatness (1 → FATNESS_WIDTH_MAX). */
+export function frogWidthScale(fatness: number): number {
+  return 1 + (FATNESS_WIDTH_MAX - 1) * Math.min(1, Math.max(0, fatness));
+}
+
+/** Vertical scale of the frog glyph for a given fatness (1 → FATNESS_HEIGHT_MAX). */
+export function frogHeightScale(fatness: number): number {
+  return 1 + (FATNESS_HEIGHT_MAX - 1) * Math.min(1, Math.max(0, fatness));
+}
+
+/**
+ * Eat-pop squash-stretch: widens and flattens at the swallow, returns to
+ * identity by the end of the window. `elapsedSinceEat` is seconds since the
+ * swallow landed; returns `{ x: 1, y: 1 }` outside the window.
+ */
+export function eatPopScale(elapsedSinceEat: number, duration = EAT_POP_DURATION): { x: number; y: number } {
+  if (elapsedSinceEat < 0 || elapsedSinceEat > duration) return { x: 1, y: 1 };
+  const t = elapsedSinceEat / duration;
+  const pulse = Math.sin(t * Math.PI);
+  return { x: 1 + EAT_POP_WIDTH * pulse, y: 1 - EAT_POP_HEIGHT * pulse };
 }
 
 /**
@@ -96,8 +136,10 @@ function startLick(elapsed: number) {
 }
 
 export function drawFrog(ctx: CanvasRenderingContext2D, state: FrogDrawState) {
-  const { frogState, stateTimer, elapsed, catchCount = 1, variant = 0 } = state;
+  const { frogState, stateTimer, elapsed, catchCount = 1, variant = 0, fatness = 0, eatPopAt = -1 } = state;
   const multicatch = catchCount > 1;
+  const fatScaleX = frogWidthScale(fatness);
+  const fatScaleY = frogHeightScale(fatness);
 
   if (lastState === "happy" && frogState === "idle") startLick(elapsed);
   lastState = frogState;
@@ -128,6 +170,7 @@ export function drawFrog(ctx: CanvasRenderingContext2D, state: FrogDrawState) {
   if (frogState === "sad") {
     ctx.translate(FROG_X, y);
     ctx.rotate(0.08);
+    ctx.scale(fatScaleX, fatScaleY);
     ctx.font = "88px serif";
     ctx.fillText("🐸", 0, 0);
     ctx.font = "26px serif";
@@ -152,6 +195,14 @@ export function drawFrog(ctx: CanvasRenderingContext2D, state: FrogDrawState) {
       scaleX *= s;
       scaleY *= s;
     } else hopStartedAt = -1;
+  }
+
+  scaleX *= fatScaleX;
+  scaleY *= fatScaleY;
+  if (eatPopAt >= 0) {
+    const { x: popX, y: popY } = eatPopScale(elapsed - eatPopAt);
+    scaleX *= popX;
+    scaleY *= popY;
   }
 
   const happyProgress = frogState === "happy" ? Math.min(1, 1 - stateTimer / HAPPY_MS) : 0;

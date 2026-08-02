@@ -36,6 +36,9 @@ compete.
     top-of-screen HUD: 🐣 → 🐤 → 🐸 → 🐉.
 - Multi-catch (2+ bugs in one throw): the happy reaction is upgraded — a higher
   jump with a full spin.
+- The frog grows fatter with your streak of catches in a row, up to a comical
+  maximum, and a miss deflates it back to normal. Each swallow plays a quick
+  squash-and-stretch "eat" pop. Purely visual — it never affects gameplay.
 - High catches add more: grabbing a bug above half reach plays a bright
   sparkle ping; grabbing one near the top fires gold star particles and a
   sun flare.

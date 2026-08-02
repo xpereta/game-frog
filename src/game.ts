@@ -2,7 +2,7 @@ import { Sound } from "./audio";
 import { FROG_X, H, W, WATER_Y } from "./consts";
 import { BUG_SPECIES, bugRenderTransform, bugY, isOffScreen, spawnBug, updateBug } from "./bugs";
 import type { Bug } from "./bugs";
-import { drawFrog, drawTongue, happyJumpOffset } from "./frog";
+import { drawFrog, drawTongue, frogFatness, happyJumpOffset } from "./frog";
 import { bestStreakAfter, drawHud } from "./hud";
 import { altitudeFor, createTongue, fireTongue, mouthY, tongueHitsBug, tongueTipY, updateTongue } from "./tongue";
 
@@ -46,6 +46,7 @@ export class Game {
   private audio = new Sound();
   private streak = 0;
   private bestStreak = 0;
+  private eatPopAt = -1;
 
   fire() {
     this.audio.unlock();
@@ -74,6 +75,7 @@ export class Game {
     this.lastCatchCount = count;
     this.happyVariant = Math.random();
     this.hasCaught = true;
+    this.eatPopAt = this.elapsed;
     this.streak += count;
     this.bestStreak = bestStreakAfter(this.streak, this.bestStreak);
   }
@@ -130,6 +132,7 @@ export class Game {
       }
       this.lastCatchCount = this.caughtThisLunge;
       this.hasCaught = true;
+      this.eatPopAt = this.elapsed;
       this.streak += landed.length;
       this.bestStreak = bestStreakAfter(this.streak, this.bestStreak);
       for (const b of landed) {
@@ -464,6 +467,8 @@ export class Game {
       elapsed: this.elapsed,
       catchCount: this.lastCatchCount,
       variant: this.happyVariant,
+      fatness: frogFatness(this.streak),
+      eatPopAt: this.eatPopAt,
     });
   }
 

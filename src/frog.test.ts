@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+  EAT_POP_DURATION,
+  FATNESS_CAP,
+  FATNESS_HEIGHT_MAX,
+  FATNESS_WIDTH_MAX,
+} from "./consts";
+import {
   blinkScale,
+  eatPopScale,
+  frogFatness,
+  frogHeightScale,
+  frogWidthScale,
   happyJumpOffset,
   happyRotation,
   hopPulseScale,
@@ -95,6 +105,54 @@ describe("happyJumpOffset", () => {
     expect(happyJumpOffset(-1)).toBe(0);
     expect(happyJumpOffset(2)).toBeCloseTo(0, 5);
     expect(happyJumpOffset(2, true)).toBeCloseTo(0, 5);
+  });
+});
+
+describe("frogFatness", () => {
+  it("is 0 at no catches, 1 at the cap, and clamps beyond", () => {
+    expect(frogFatness(0)).toBe(0);
+    expect(frogFatness(FATNESS_CAP)).toBe(1);
+    expect(frogFatness(FATNESS_CAP * 2)).toBe(1);
+    expect(frogFatness(-1)).toBe(0);
+  });
+
+  it("scales linearly with streak below the cap", () => {
+    expect(frogFatness(FATNESS_CAP / 2)).toBeCloseTo(0.5, 5);
+    expect(frogFatness(FATNESS_CAP / 4)).toBeCloseTo(0.25, 5);
+  });
+});
+
+describe("frogWidthScale", () => {
+  it("is 1 when slim and the max when fully fat", () => {
+    expect(frogWidthScale(0)).toBe(1);
+    expect(frogWidthScale(1)).toBe(FATNESS_WIDTH_MAX);
+  });
+
+  it("clamps out-of-range fatness", () => {
+    expect(frogWidthScale(-1)).toBe(1);
+    expect(frogWidthScale(2)).toBe(FATNESS_WIDTH_MAX);
+  });
+});
+
+describe("frogHeightScale", () => {
+  it("is 1 when slim and the max when fully fat", () => {
+    expect(frogHeightScale(0)).toBe(1);
+    expect(frogHeightScale(1)).toBe(FATNESS_HEIGHT_MAX);
+  });
+});
+
+describe("eatPopScale", () => {
+  it("is identity outside the pop window", () => {
+    expect(eatPopScale(-0.1)).toEqual({ x: 1, y: 1 });
+    expect(eatPopScale(0)).toEqual({ x: 1, y: 1 });
+    expect(eatPopScale(EAT_POP_DURATION)).toEqual({ x: 1, y: 1 });
+    expect(eatPopScale(EAT_POP_DURATION + 0.5)).toEqual({ x: 1, y: 1 });
+  });
+
+  it("widens and flattens at the swallow peak", () => {
+    const { x, y } = eatPopScale(EAT_POP_DURATION / 2);
+    expect(x).toBeGreaterThan(1);
+    expect(y).toBeLessThan(1);
   });
 });
 
